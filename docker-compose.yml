@@ -2,10 +2,10 @@ version: '3.8'
 
 services:
   postgres:
-    image: ankane/pgvector:v0.5.1 # Официальный Docker-образ PostgreSQL с уже установленным pgvector
+    image: pgvector/pgvector:pg17 # Используем самый свежий и официальный образ
     container_name: pvt_postgres_db
     ports:
-      - '5432:5432'
+      - '5435:5432'
     environment:
       POSTGRES_USER: pvt_admin
       POSTGRES_PASSWORD: pvt_secure_password_2026
@@ -15,4 +15,4 @@ services:
     restart: always
 
 volumes:
-  pgdata: #  чтобы данные БД не удалялись при перезапуске контейнера
+  pgdata: # ч чтобы данные БД не удалялись при перезапуске контейнера
