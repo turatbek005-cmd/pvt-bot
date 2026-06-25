@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: ankane/pgvector:v0.5.1 # Официальный Docker-образ PostgreSQL с уже установленным pgvector
+    container_name: pvt_postgres_db
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: pvt_admin
+      POSTGRES_PASSWORD: pvt_secure_password_2026
+      POSTGRES_DB: pvt_database
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: always
+
+volumes:
+  pgdata: #  чтобы данные БД не удалялись при перезапуске контейнера
