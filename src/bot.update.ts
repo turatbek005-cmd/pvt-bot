@@ -1,17 +1,33 @@
 import { Update, Start, On, Ctx } from 'nestjs-telegraf';
 import { Context } from 'telegraf';
 import { AiService } from './ai.service';
+import { PrismaService } from './prisma.service';
 
 @Update()
 export class BotUpdate {
-  constructor(private readonly aiService: AiService) {}
+  constructor(
+    private readonly aiService: AiService,
+    private readonly prismaService: PrismaService, // Внедряем нашу базу данных Prisma
+  ) {}
 
   @Start()
   async onStart(@Ctx() ctx: Context) {
-    const userName = ctx.from?.first_name || 'уважаемый гость';
+    const userId = ctx.from?.id.toString();
+    if (!userId) return;
+
+    const firstName = ctx.from?.first_name || '';
+    const lastName = ctx.from?.last_name || '';
+    const username = ctx.from?.username || '';
+
+    // Регистрируем пользователя в БД (если его нет) или обновляем его данные
+    await this.prismaService.user.upsert({
+      where: { id: userId },
+      update: { firstName, lastName, username },
+      create: { id: userId, firstName, lastName, username },
+    });
 
     await ctx.reply(
-      `Здравствуйте, ${userName}! 👋\n\n` +
+      `Здравствуйте, ${firstName}! 👋\n\n` +
         `Я официальный ИИ-ассистент Дирекции Парка Высоких Технологий КР.\n\n` +
         `Я могу ответить на ваши вопросы по законодательству ПВТ, налогам, уставу и порядку регистрации.\n\n` +
         `Чем я могу вам помочь?`,
@@ -24,18 +40,81 @@ export class BotUpdate {
       return;
     }
 
+    const userId = ctx.from?.id.toString();
+    if (!userId) return;
+
     const userText = ctx.message.text;
 
     try {
       await ctx.sendChatAction('typing');
 
-      // Отправляем запрос в Gemini
-      const aiResponse = await this.aiService.generateAnswer(userText);
+      const firstName = ctx.from?.first_name || '';
+      const lastName = ctx.from?.last_name || '';
+      const username = ctx.from?.username || '';
 
-      // Разрезаем ответ ИИ на безопасные кусочки
+      // 1. Убедимся, что пользователь есть в БД (на случай, если он не нажимал /start)
+      await this.prismaService.user.upsert({
+        where: { id: userId },
+        update: { firstName, lastName, username },
+        create: { id: userId, firstName, lastName, username },
+      });
+
+      // 2. Сохраняем сообщение пользователя в базу данных
+      await this.prismaService.chatMessage.create({
+        data: {
+          userId,
+          role: 'user',
+          text: userText,
+        },
+      });
+
+      // 3. Загружаем из базы историю последних 10 сообщений
+      const dbMessages = await this.prismaService.chatMessage.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      });
+
+      // Переворачиваем массив обратно в хронологический порядок (от старых к новым)
+      // и исключаем самое последнее сообщение, так как оно пойдет как текущий prompt в sendMessage
+      const rawHistory = dbMessages
+        .reverse()
+        .slice(0, -1)
+        .map((msg) => ({
+          role:
+            msg.role === 'assistant' ? ('model' as const) : ('user' as const),
+          text: msg.text,
+        }));
+
+      // Умная фильтрация: находим индекс самого первого сообщения от пользователя ('user'),
+      // так как Google Gemini строго требует, чтобы история начиналась именно с сообщения пользователя!
+      const firstUserIndex = rawHistory.findIndex((msg) => msg.role === 'user');
+
+      // Если нашли сообщение юзера — отрезаем всё, что было до него. Если нет — отправляем пустой массив истории.
+      const historyForAi =
+        firstUserIndex !== -1 ? rawHistory.slice(firstUserIndex) : [];
+
+      // 4. Отправляем запрос в Gemini с учетом отфильтрованной истории
+      const aiResponse = await this.aiService.generateAnswerWithHistory(
+        userText,
+        historyForAi,
+      );
+
+
+
+      // 5. Сохраняем ответ ИИ в базу данных
+      await this.prismaService.chatMessage.create({
+        data: {
+          userId,
+          role: 'assistant',
+          text: aiResponse,
+        },
+      });
+
+      // 6. Разрезаем ответ на безопасные по длине кусочки (для Telegram лимит 4096 символов)
       const messageChunks = this.splitMessage(aiResponse);
 
-      // Отправляем каждый кусочек отдельным сообщением
+      // 7. Отправляем ответы пользователю
       for (const chunk of messageChunks) {
         await ctx.reply(chunk);
       }
@@ -45,28 +124,21 @@ export class BotUpdate {
     }
   }
 
-  /**
-   * Профессиональный хелпер для нарезки длинных текстов по абзацам
-   */
   private splitMessage(text: string, maxLength = 4000): string[] {
     const chunks: string[] = [];
     let currentChunk = '';
 
-    // Разделяем текст по строкам, чтобы не разрывать слова и Markdown-разметку
     const lines = text.split('\n');
 
     for (const line of lines) {
-      // Если добавление новой строки превысит лимит, сохраняем текущий чанк
       if (currentChunk.length + line.length + 1 > maxLength) {
         chunks.push(currentChunk);
-        currentChunk = line; // Начинаем новый чанк со следующей строки
+        currentChunk = line;
       } else {
-        // Иначе продолжаем накапливать чанк
         currentChunk = currentChunk ? `${currentChunk}\n${line}` : line;
       }
     }
 
-    // Добавляем последний кусочек, если он остался
     if (currentChunk) {
       chunks.push(currentChunk);
     }

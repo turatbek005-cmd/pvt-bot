@@ -2,7 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TelegrafModule } from 'nestjs-telegraf';
 import { BotUpdate } from './bot.update';
-import { AiService } from './ai.service'; // Импортируем новый сервис
+import { AiService } from './ai.service';
+import { PrismaService } from './prisma.service';
 
 @Module({
   imports: [
@@ -20,7 +21,8 @@ import { AiService } from './ai.service'; // Импортируем новый �
   controllers: [],
   providers: [
     BotUpdate,
-    AiService, // Регистрируем сервис ИИ здесь!
+    AiService,
+    PrismaService
   ],
 })
 export class AppModule {}
