@@ -1,0 +1,43 @@
+datasource db {
+  provider   = "postgresql"
+  extensions = [vector] // <--- Вот здесь теперь правильное имя!
+}
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"] // Разрешаем Prisma управлять расширениями БД
+}
+
+// 1. Таблица пользователей Telegram
+model User {
+  id         String   @id // Будем хранить уникальный Telegram ID пользователя в виде строки
+  username   String?  // Никнейм в TG (например, @turat)
+  firstName  String?  // Имя в TG
+  lastName   String?  // Фамилия в TG
+  createdAt  DateTime @default(now()) // Дата первого обращения в бот
+
+  messages   ChatMessage[] // Связь: у одного пользователя может быть много сообщений
+}
+
+// 2. Таблица истории чата (для аналитики и контекста ИИ)
+model ChatMessage {
+  id        String   @id @default(uuid()) // Уникальный ID сообщения
+  userId    String   // ID пользователя, отправившего сообщение
+  role      String   // Кто отправил: "user" (пользователь) или "assistant" (бот)
+  text      String   // Текст сообщения
+  createdAt DateTime @default(now()) // Время отправки
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// 3. Таблица базы знаний (кусочки законов ПВТ КР)
+model DocumentChunk {
+  id        String   @id @default(uuid())
+  content   String   // Сам текст фрагмента закона (например, Статья 4 закона о ПВТ...)
+  source    String   // Источник (например, "Закон о ПВТ, Статья 4")
+  createdAt DateTime @default(now())
+
+  // Поле для ИИ-вектора. Модель Gemini (text-embedding-004) создает векторы длиной 768 чисел.
+  // Так как в стандартном SQL такого типа нет, мы используем специальный тип расширения pgvector.
+  embedding Unsupported("vector(768)")? 
+}
