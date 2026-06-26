@@ -4,6 +4,7 @@ import { TelegrafModule } from 'nestjs-telegraf';
 import { BotUpdate } from './bot.update';
 import { AiService } from './ai.service';
 import { PrismaService } from './prisma.service';
+import { DocumentService } from './document.service';
 
 @Module({
   imports: [
@@ -19,10 +20,6 @@ import { PrismaService } from './prisma.service';
     }),
   ],
   controllers: [],
-  providers: [
-    BotUpdate,
-    AiService,
-    PrismaService
-  ],
+  providers: [BotUpdate, AiService, PrismaService, DocumentService],
 })
 export class AppModule {}

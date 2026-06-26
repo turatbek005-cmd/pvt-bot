@@ -1,13 +1,17 @@
 import { Update, Start, On, Ctx } from 'nestjs-telegraf';
 import { Context } from 'telegraf';
+import { ConfigService } from '@nestjs/config';
 import { AiService } from './ai.service';
 import { PrismaService } from './prisma.service';
+import { DocumentService, SearchResultChunk } from './document.service'; // Импортируем интерфейс
 
 @Update()
 export class BotUpdate {
   constructor(
     private readonly aiService: AiService,
-    private readonly prismaService: PrismaService, // Внедряем нашу базу данных Prisma
+    private readonly prismaService: PrismaService,
+    private readonly documentService: DocumentService,
+    private readonly configService: ConfigService,
   ) {}
 
   @Start()
@@ -19,7 +23,6 @@ export class BotUpdate {
     const lastName = ctx.from?.last_name || '';
     const username = ctx.from?.username || '';
 
-    // Регистрируем пользователя в БД (если его нет) или обновляем его данные
     await this.prismaService.user.upsert({
       where: { id: userId },
       update: { firstName, lastName, username },
@@ -52,14 +55,12 @@ export class BotUpdate {
       const lastName = ctx.from?.last_name || '';
       const username = ctx.from?.username || '';
 
-      // 1. Убедимся, что пользователь есть в БД (на случай, если он не нажимал /start)
       await this.prismaService.user.upsert({
         where: { id: userId },
         update: { firstName, lastName, username },
         create: { id: userId, firstName, lastName, username },
       });
 
-      // 2. Сохраняем сообщение пользователя в базу данных
       await this.prismaService.chatMessage.create({
         data: {
           userId,
@@ -68,15 +69,12 @@ export class BotUpdate {
         },
       });
 
-      // 3. Загружаем из базы историю последних 10 сообщений
       const dbMessages = await this.prismaService.chatMessage.findMany({
         where: { userId },
         orderBy: { createdAt: 'desc' },
-        take: 10,
+        take: 30,
       });
 
-      // Переворачиваем массив обратно в хронологический порядок (от старых к новым)
-      // и исключаем самое последнее сообщение, так как оно пойдет как текущий prompt в sendMessage
       const rawHistory = dbMessages
         .reverse()
         .slice(0, -1)
@@ -86,23 +84,58 @@ export class BotUpdate {
           text: msg.text,
         }));
 
-      // Умная фильтрация: находим индекс самого первого сообщения от пользователя ('user'),
-      // так как Google Gemini строго требует, чтобы история начиналась именно с сообщения пользователя!
       const firstUserIndex = rawHistory.findIndex((msg) => msg.role === 'user');
-
-      // Если нашли сообщение юзера — отрезаем всё, что было до него. Если нет — отправляем пустой массив истории.
       const historyForAi =
         firstUserIndex !== -1 ? rawHistory.slice(firstUserIndex) : [];
 
-      // 4. Отправляем запрос в Gemini с учетом отфильтрованной истории
-      const aiResponse = await this.aiService.generateAnswerWithHistory(
+      const optimizedQuery = await this.aiService.rewriteQuery(
         userText,
         historyForAi,
       );
+      console.log(
+        `[Query Rewriting] Оригинал: "${userText}" -> Оптимизированный запрос: "${optimizedQuery}"`,
+      );
 
+      const queryEmbedding = await this.aiService.getEmbedding(optimizedQuery);
 
+      const similarChunks = await this.documentService.findSimilarChunks(
+        queryEmbedding,
+        5,
+      );
 
-      // 5. Сохраняем ответ ИИ в базу данных
+      let contextText = '';
+      if (similarChunks.length > 0) {
+        contextText = similarChunks
+          .map(
+            (chunk: SearchResultChunk, index) =>
+              `[Статья №${index + 1}]\n` +
+              `Источник: ${chunk.source}\n` +
+              `Текст статьи:\n${chunk.content}`,
+          )
+          .join('\n\n---\n\n');
+      }
+
+      const htpContactInfo =
+        this.configService.get<string>('HTP_CONTACT_INFO') || 'Дирекцию ПВТ КР';
+
+      const systemPrompt =
+        `Ты — официальный ИИ-ассистент Дирекции Парка Высоких Технологий Кыргызской Республики (ПВТ КР).\n` +
+        `Твоя цель — профессионально, вежливо и точно отвечать на вопросы резидентов и кандидатов на основе предоставленного законодательства.\n\n` +
+        `СТРОГИЕ ОГРАНИЧЕНИЯ И ПРАВИЛА ПОВЕДЕНИЯ:\n` +
+        `1. ОТВЕЧАЙ ИСКЛЮЧИТЕЛЬНО на основе предоставленного ниже КОНТЕКСТА.\n` +
+        `2. Если в предоставленном КОНТЕКСТЕ нет ответа на вопрос пользователя, ты НЕ ИМЕЕШЬ ПРАВА использовать свои общие знания о мире, придумывать законы от себя или строить догадки. В этом случае строго ответь следующей фразой:\n` +
+        `"К сожалению, в моей базе знаний нет информации по вашему вопросу. Пожалуйста, обратитесь к сотруднику Дирекции ПВТ КР за детальной консультацией.\nКонтакты Дирекции ПВТ КР: ${htpContactInfo}."\n` +
+        `3. Будь лаконичен, выражайся официально-деловым юридическим языком. Структурируй ответы списками или абзацами для удобства чтения в мессенджере Telegram.\n` +
+        `4. Если пользователь просто здоровается, представляется или ведет вежливую беседу (small talk), отвечай вежливо и дружелюбно, напоминая, что ты ИИ-ассистент ПВТ КР и готов помочь с вопросами по регистрации, налогам или уставу.\n\n` +
+        `КОНТЕКСТ ИЗ ЗАКОНОВ ПВТ КР:\n` +
+        `${contextText || 'Информация в базе знаний отсутствует.'}\n\n` +
+        `ТЕКУЩИЙ ВОПРОС ПОЛЬЗОВАТЕЛЯ: ${userText}`;
+
+      const aiResponse = await this.aiService.generateAnswerWithHistory(
+        systemPrompt,
+        historyForAi,
+      );
+
       await this.prismaService.chatMessage.create({
         data: {
           userId,
@@ -111,10 +144,7 @@ export class BotUpdate {
         },
       });
 
-      // 6. Разрезаем ответ на безопасные по длине кусочки (для Telegram лимит 4096 символов)
       const messageChunks = this.splitMessage(aiResponse);
-
-      // 7. Отправляем ответы пользователю
       for (const chunk of messageChunks) {
         await ctx.reply(chunk);
       }
