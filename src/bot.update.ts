@@ -3,7 +3,8 @@ import { Context } from 'telegraf';
 import { ConfigService } from '@nestjs/config';
 import { AiService } from './ai.service';
 import { PrismaService } from './prisma.service';
-import { DocumentService, SearchResultChunk } from './document.service'; // Импортируем интерфейс
+import { DocumentService, SearchResultChunk } from './document.service';
+
 
 @Update()
 export class BotUpdate {
@@ -12,6 +13,7 @@ export class BotUpdate {
     private readonly prismaService: PrismaService,
     private readonly documentService: DocumentService,
     private readonly configService: ConfigService,
+
   ) {}
 
   @Start()
