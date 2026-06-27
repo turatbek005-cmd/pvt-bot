@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ru" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <title>Редактировать статью | Админка ПВТ КР</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = { darkMode: 'class' }
+      if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    </script>
+</head>
+<body class="h-full text-slate-100 flex transition-colors duration-200 bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
+
+<!-- САЙДБАР НАВИГАЦИИ -->
+<div class="w-64 bg-slate-100 dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col justify-between">
+    <div class="p-6">
+        <h2 class="text-xl font-bold tracking-wider text-slate-800 dark:text-white">ПВТ КР Админ</h2>
+        <p class="text-xs text-slate-400 mt-1">Панель управления ИИ</p>
+        <button onclick="toggleTheme()" class="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-200 dark:bg-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
+            🌓 Сменить тему
+        </button>
+        <nav class="mt-8 space-y-2">
+            <a href="/admin" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+                📊 Статистика
+            </a>
+            <a href="/admin/users" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+                👥 Пользователи
+            </a>
+            <a href="/admin/logs" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+                💬 Логи переписок
+            </a>
+            <a href="/admin/documents" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors bg-indigo-600 text-white">
+                📚 База знаний
+            </a>
+        </nav>
+    </div>
+    <div class="p-6 border-t border-slate-200 dark:border-slate-700">
+        <a href="/admin/logout" class="flex items-center justify-center w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors">
+            🚪 Выйти
+        </a>
+    </div>
+</div>
+
+<!-- ОСНОВНОЙ КОНТЕНТ -->
+<div class="flex-1 p-10 overflow-y-auto">
+    <div class="mb-10">
+        <a href="/admin/documents" class="text-sm text-indigo-500 font-semibold hover:underline">← Назад к базе знаний</a>
+        <h1 class="text-3xl font-extrabold mt-2 text-slate-800 dark:text-white">✏️ Редактировать документ</h1>
+        <p class="text-xs text-slate-400 mt-1">ID: <%= doc.id %></p>
+    </div>
+
+    <!-- ФОРМА РЕДАКТИРОВАНИЯ -->
+    <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-md max-w-4xl">
+        <form action="/admin/documents/<%= doc.id %>/edit" method="POST" class="space-y-4">
+            <div>
+                <label for="source" class="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Источник (Название):</label>
+                <input type="text" id="source" name="source" value="<%= doc.source %>" required class="w-full px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div>
+                <label for="content" class="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Текст статьи:</label>
+                <textarea id="content" name="content" rows="12" required class="w-full px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm leading-relaxed"><%= doc.content %></textarea>
+            </div>
+            <div class="flex justify-end gap-3">
+                <a href="/admin/documents" class="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-sm font-semibold rounded-lg transition-colors">
+                    Отмена
+                </a>
+                <button type="submit" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-md">
+                    ⚡ Сохранить и перевекторизовать
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+  function toggleTheme() {
+    if (document.documentElement.classList.contains('dark')) {
+      document.documentElement.classList.remove('dark');
+      localStorage.theme = 'light';
+    } else {
+      document.documentElement.classList.add('dark');
+      localStorage.theme = 'dark';
+    }
+  }
+</script>
+</body>
+</html>

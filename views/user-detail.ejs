@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ru" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <title>История переписки | Админка ПВТ КР</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = { darkMode: 'class' }
+      if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    </script>
+</head>
+<body class="h-full flex transition-colors duration-200 bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
+
+<!-- САЙДБАР НАВИГАЦИИ -->
+<div class="w-64 bg-slate-100 dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col justify-between">
+    <div class="p-6">
+        <h2 class="text-xl font-bold tracking-wider text-slate-800 dark:text-white">ПВТ КР Админ</h2>
+        <p class="text-xs text-slate-400 mt-1">Панель управления ИИ</p>
+        <button onclick="toggleTheme()" class="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-200 dark:bg-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
+            🌓 Сменить тему
+        </button>
+        <nav class="mt-8 space-y-2">
+            <a href="/admin" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+                📊 Статистика
+            </a>
+            <a href="/admin/users" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors bg-indigo-600 text-white">
+                👥 Пользователи
+            </a>
+            <a href="/admin/logs" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+                💬 Логи переписок
+            </a>
+            <a href="/admin/documents" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+                📚 База знаний
+            </a>
+        </nav>
+    </div>
+    <div class="p-6 border-t border-slate-200 dark:border-slate-700">
+        <a href="/admin/logout" class="flex items-center justify-center w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors">
+            🚪 Выйти
+        </a>
+    </div>
+</div>
+
+<!-- ОСНОВНОЙ КОНТЕНТ -->
+<div class="flex-1 p-10 overflow-y-auto">
+    <div class="flex justify-between items-center mb-10">
+        <div>
+            <a href="/admin/users" class="text-sm text-indigo-500 font-semibold hover:underline">← Назад к списку</a>
+            <h1 class="text-3xl font-extrabold mt-2">💬 Диалог пользователя: <%= user.firstName %> <%= user.lastName || '' %></h1>
+            <% if (user.username) { %>
+                <p class="text-sm text-indigo-500 mt-1">@<%= user.username %> (ID: <%= user.id %>)</p>
+            <% } %>
+        </div>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Сообщений в чате: <%= logs.length %></p>
+    </div>
+
+    <!-- ТЕЛО ДИАЛОГА -->
+    <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-md max-w-4xl space-y-6">
+        <% if (logs.length === 0) { %>
+            <p class="text-center text-slate-400 text-sm py-10">История пуста.</p>
+        <% } %>
+        <% logs.forEach(function(log) { %>
+            <div class="flex flex-col <%= log.role === 'user' ? 'items-end' : 'items-start' %>">
+                <div class="flex items-center gap-2 mb-1 text-xs text-slate-500 dark:text-slate-400">
+                    <span><%= log.role === 'user' ? 'Вы' : 'ИИ-Бот' %></span>
+                    <span>•</span>
+                    <span><%= new Date(log.createdAt).toLocaleTimeString('ru-RU') %></span>
+                </div>
+                <div class="max-w-xl p-4 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap shadow-sm <%= log.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-100 rounded-tl-none' %>">
+                    <%= log.text %>
+                </div>
+            </div>
+        <% }); %>
+    </div>
+</div>
+
+<script>
+  function toggleTheme() {
+    if (document.documentElement.classList.contains('dark')) {
+      document.documentElement.classList.remove('dark');
+      localStorage.theme = 'light';
+    } else {
+      document.documentElement.classList.add('dark');
+      localStorage.theme = 'dark';
+    }
+  }
+</script>
+</body>
+</html>

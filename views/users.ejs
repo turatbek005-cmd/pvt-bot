@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ru" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <title>Пользователи | Админка ПВТ КР</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = { darkMode: 'class' }
+      if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    </script>
+</head>
+<body class="h-full flex transition-colors duration-200 bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
+
+<!-- САЙДБАР НАВИГАЦИИ -->
+<div class="w-64 bg-slate-100 dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col justify-between">
+    <div class="p-6">
+        <h2 class="text-xl font-bold tracking-wider text-slate-800 dark:text-white">ПВТ КР Админ</h2>
+        <p class="text-xs text-slate-400 mt-1">Панель управления ИИ</p>
+        <button onclick="toggleTheme()" class="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-200 dark:bg-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
+            🌓 Сменить тему
+        </button>
+        <nav class="mt-8 space-y-2">
+            <a href="/admin" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+                📊 Статистика
+            </a>
+            <a href="/admin/users" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors bg-indigo-600 text-white">
+                👥 Пользователи
+            </a>
+            <a href="/admin/logs" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+                💬 Логи переписок
+            </a>
+            <a href="/admin/documents" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+                📚 База знаний
+            </a>
+        </nav>
+    </div>
+    <div class="p-6 border-t border-slate-200 dark:border-slate-700">
+        <a href="/admin/logout" class="flex items-center justify-center w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors">
+            🚪 Выйти
+        </a>
+    </div>
+</div>
+
+<!-- ОСНОВНОЙ КОНТЕНТ -->
+<div class="flex-1 p-10 overflow-y-auto">
+    <div class="flex justify-between items-center mb-10">
+        <h1 class="text-3xl font-extrabold">👥 Пользователи Telegram</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Всего в базе: <%= users.length %></p>
+    </div>
+
+    <!-- ТАБЛИЦА ПОЛЬЗОВАТЕЛЕЙ -->
+    <div class="bg-white dark:bg-slate-800 border border-slate-250 dark:border-slate-700 rounded-2xl overflow-hidden shadow-md">
+        <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+            <thead class="bg-slate-100 dark:bg-slate-750">
+            <tr>
+                <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Telegram ID</th>
+                <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Имя пользователя</th>
+                <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Никнейм</th>
+                <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Дата регистрации</th>
+                <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Вопросов задано</th>
+                <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Действие</th>
+            </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200 dark:divide-slate-700 bg-white dark:bg-slate-800">
+            <% if (users.length === 0) { %>
+                <tr>
+                    <td colspan="6" class="px-6 py-10 text-center text-sm text-slate-400">Пользователи пока не зарегистрированы.</td>
+                </tr>
+            <% } %>
+            <% users.forEach(function(user) { %>
+                <tr class="hover:bg-slate-100/30 dark:hover:bg-slate-750/30 transition-colors">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
+                        <%= user.id %>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold">
+                        <%= user.firstName %> <%= user.lastName || '' %>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-indigo-500 dark:text-indigo-400 font-medium">
+                        <%= user.username ? '@' + user.username : 'отсутствует' %>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
+                        <%= new Date(user.createdAt).toLocaleDateString('ru-RU') %>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-center">
+                <span class="px-2.5 py-1 text-xs rounded-full bg-slate-100 dark:bg-slate-700">
+                  <%= user._count.messages %>
+                </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <a href="/admin/users/<%= user.id %>" class="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300">
+                            🔍 История диалога →
+                        </a>
+                    </td>
+                </tr>
+            <% }); %>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+  function toggleTheme() {
+    if (document.documentElement.classList.contains('dark')) {
+      document.documentElement.classList.remove('dark');
+      localStorage.theme = 'light';
+    } else {
+      document.documentElement.classList.add('dark');
+      localStorage.theme = 'dark';
+    }
+  }
+</script>
+</body>
+</html>
