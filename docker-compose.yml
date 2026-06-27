@@ -1,18 +1,39 @@
 version: '3.8'
 
 services:
+
   postgres:
-    image: pgvector/pgvector:pg17 # Используем самый свежий и официальный образ
+    image: pgvector/pgvector:pg17
     container_name: pvt_postgres_db
     ports:
       - '5435:5432'
     environment:
-      POSTGRES_USER: pvt_admin
-      POSTGRES_PASSWORD: pvt_secure_password_2026
-      POSTGRES_DB: pvt_database
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - pgdata:/var/lib/postgresql/data
     restart: always
 
+  bot-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pvt_ai_bot_app
+    ports:
+      - '3000:3000'
+    environment:
+      DATABASE_URL: ${DATABASE_URL_DOCKER}
+      ACTIVE_AI_PROVIDER: ${ACTIVE_AI_PROVIDER}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      HTP_CONTACT_INFO: ${HTP_CONTACT_INFO}
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      GROQ_MODEL: ${GROQ_MODEL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+    depends_on:
+      - postgres
+    restart: always
+
 volumes:
-  pgdata: # ч чтобы данные БД не удалялись при перезапуске контейнера
+  pgdata:

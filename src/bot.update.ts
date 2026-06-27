@@ -1,4 +1,4 @@
-import { Update, Start, On, Ctx } from 'nestjs-telegraf';
+import { Update, Start, Help, On, Ctx } from 'nestjs-telegraf'; // Импортировали Help
 import { Context } from 'telegraf';
 import { ConfigService } from '@nestjs/config';
 import { AiService } from './ai.service';
@@ -7,6 +7,9 @@ import { DocumentService, SearchResultChunk } from './document.service';
 
 @Update()
 export class BotUpdate {
+  // Карта для отслеживания анти-спама (хранит ID пользователя и массив меток времени его сообщений)
+  private userCooldowns = new Map<string, number[]>();
+
   constructor(
     private readonly aiService: AiService,
     private readonly prismaService: PrismaService,
@@ -37,6 +40,23 @@ export class BotUpdate {
     );
   }
 
+  // ШАГ 4.2: Команда /help (Справка для пользователей)
+  @Help()
+  async onHelp(@Ctx() ctx: Context) {
+    await ctx.reply(
+      `❓ Справка по использованию ИИ-ассистента ПВТ КР:\n\n` +
+        `Я — умный помощник, подключенный к официальной юридической базе знаний Парка Высоких Технологий КР. Моя цель — отвечать на ваши вопросы строго по закону.\n\n` +
+        `📌 Что я умею делать:\n` +
+        `• Отвечать на вопросы по налогам и льготам для резидентов ПВТ.\n` +
+        `• Объяснять порядок регистрации и требования к кандидатам.\n` +
+        `• Понимать вопросы на кыргызском, русском и английском языках (кыргызча, орусча, англисче).\n\n` +
+        `⚙️ Команды бота:\n` +
+        `/start — Запустить бота и получить приветствие.\n` +
+        `/help — Показать это справочное меню.\n\n` +
+        `💬 Просто напишите свой вопрос в чат (например: "Каковы налоговые ставки для резидента ПВТ КР?"), и я мгновенно найду нужную статью закона!`,
+    );
+  }
+
   @On('text')
   async onMessage(@Ctx() ctx: Context) {
     if (!ctx.message || !('text' in ctx.message)) {
@@ -47,6 +67,33 @@ export class BotUpdate {
     if (!userId) return;
 
     const userText = ctx.message.text;
+
+    // ==============================================
+    // ШАГ 4.1: АНТИ-СПАМ ПРЕДОХРАНИТЕЛЬ (Throttling)
+    // ==============================================
+    const now = Date.now();
+    const userRequests = this.userCooldowns.get(userId) || [];
+
+    // Оставляем только те метки времени, которые были за последние 10 секунд
+    const recentRequests = userRequests.filter(
+      (timestamp) => now - timestamp < 10000,
+    );
+
+    if (recentRequests.length >= 3) {
+      console.warn(
+        `[Anti-Spam] Заблокирован спам-запрос от пользователя ID: ${userId}`,
+      );
+      await ctx.reply(
+        '⚠️ Пожалуйста, не отправляйте запросы так часто!\n\n' +
+          'Я работаю на бесплатном тарифе разработки. Отправляйте вопросы не чаще одного раза в 3 секунды. Спасибо за понимание! 🙏',
+      );
+      return;
+    }
+
+    // Записываем текущую метку времени сообщения
+    recentRequests.push(now);
+    this.userCooldowns.set(userId, recentRequests);
+    // ==============================================
 
     try {
       await ctx.sendChatAction('typing');
@@ -88,9 +135,6 @@ export class BotUpdate {
       const historyForAi =
         firstUserIndex !== -1 ? rawHistory.slice(firstUserIndex) : [];
 
-      // ==============================================
-      // УЛУЧШЕНИЕ 1: ДЕТЕКТОР ПРОСТЫХ ПРИВЕТСТВИЙ (GREETINGS)
-      // ==============================================
       const greetings = [
         'привет',
         'здравствуйте',
@@ -111,9 +155,7 @@ export class BotUpdate {
       let contextText = '';
       let hasGoodMatch = true;
 
-      // Если это НЕ простое приветствие, запускаем векторный RAG поиск
       if (!isSimpleGreeting) {
-        // 1. ИИ-препроцессинг (Query Rewriting + Перевод)
         const optimizedQuery = await this.aiService.rewriteQuery(
           userText,
           historyForAi,
@@ -125,7 +167,6 @@ export class BotUpdate {
         const queryEmbedding =
           await this.aiService.getEmbedding(optimizedQuery);
 
-        // Ищем статьи законов в PostgreSQL
         const similarChunks = await this.documentService.findSimilarChunks(
           queryEmbedding,
           5,
@@ -135,9 +176,6 @@ export class BotUpdate {
           this.configService.get<string>('HTP_CONTACT_INFO') ||
           'Дирекцию ПВТ КР';
 
-        // ==============================================
-        // УЛУЧШЕНИЕ 2: СУПЕР-СТРОГИЙ ПОРОГ СХОДСТВА (0.40)
-        // ==============================================
         const bestMatch = similarChunks[0];
         hasGoodMatch = bestMatch && Number(bestMatch.distance) <= 0.4;
 
@@ -163,7 +201,6 @@ export class BotUpdate {
           return;
         }
 
-        // Собираем контекст из найденных статей (только те, что прошли порог 0.40)
         contextText = similarChunks
           .filter((chunk: SearchResultChunk) => Number(chunk.distance) <= 0.4)
           .map(
@@ -182,9 +219,6 @@ export class BotUpdate {
       const htpContactInfo =
         this.configService.get<string>('HTP_CONTACT_INFO') || 'Дирекцию ПВТ КР';
 
-      // ==============================================
-      // УЛУЧШЕНИЕ 3: ЖЕСТКАЯ СИСТЕМНАЯ ИНСТРУКЦИЯ ( Модель строго подчиняется этим правилам)
-      // ==============================================
       const systemInstruction =
         `Ты — официальный ИИ-ассистент Дирекции Парка Высоких Технологий Кыргызской Республики (ПВТ КР).\n` +
         `Твоя цель — профессионально, вежливо и точно отвечать на вопросы резидентов и кандидатов на основе предоставленного законодательства.\n\n` +
@@ -196,16 +230,14 @@ export class BotUpdate {
         `4. ПРАВИЛО ЯЗЫКА (МУЛЬТИЯЗЫЧНОСТЬ): Отвечай строго на том языке, на котором пользователь задал свой текущий вопрос (например, если вопрос на кыргызском — переведи предоставленный русский контекст законов и ответь на красивом кыргызском; если на английском — на английском, если на русском — на русском).\n` +
         `5. Будь лаконичен, выражайся официально-деловым юридическим языком. Структурируй ответы списками или абзацами для удобства чтения в мессенджере Telegram.`;
 
-      // Передаем в качестве prompt только чистый контекст и вопрос
       const userPrompt = isSimpleGreeting
         ? userText
         : `КОНТЕКСТ ИЗ ЗАКОНОВ ПВТ КР:\n${contextText}\n\nТЕКУЩИЙ ВОПРОС ПОЛЬЗОВАТЕЛЯ: ${userText}`;
 
-      // Отправляем всё в ИИ (системные правила теперь внедряются на уровне инициализации модели в getGenerativeModel)
       const aiResponse = await this.aiService.generateAnswerWithHistory(
         userPrompt,
         historyForAi,
-        systemInstruction, // <--- Передаем третьим параметром
+        systemInstruction,
       );
 
       await this.prismaService.chatMessage.create({

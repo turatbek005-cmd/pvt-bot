@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
+import { ChatMessage, User, Prisma } from '@prisma/client'; // Импортируем Prisma для строгого типа условий
+
+// Создаем строгий тип связи сообщения с пользователем
+type ChatMessageWithUser = ChatMessage & { user: User };
 
 @Injectable()
 export class AdminService {
@@ -10,7 +14,6 @@ export class AdminService {
     const totalUsers = await this.prisma.user.count();
     const totalMessages = await this.prisma.chatMessage.count();
 
-    // Считаем только те сообщения, на которые бот ответил нашей точной заглушкой
     const unhandledCount = await this.prisma.chatMessage.count({
       where: {
         role: 'assistant',
@@ -27,27 +30,65 @@ export class AdminService {
     };
   }
 
-  // 2. Получаем историю всех переписок с поддержкой фильтров (?filter=user / bot / unhandled)
-  async getChatLogs(filter?: string, limit = 100) {
-    const whereClause: any = {};
+  // 2. Получаем историю переписок с умной фильтрацией реальных вопросов без ответа
+  async getChatLogs(
+    filter?: string,
+    limit = 100,
+  ): Promise<ChatMessageWithUser[]> {
+    // =========================================================
+    // УМНАЯ ФИЛЬТРАЦИЯ: Выводим РЕАЛЬНЫЕ ВОПРОСЫ ПОЛЬЗОВАТЕЛЕЙ, на которые бот не ответил
+    // =========================================================
+    if (filter === 'unhandled') {
+      const unhandledBotMessages = await this.prisma.chatMessage.findMany({
+        where: {
+          role: 'assistant',
+          text: {
+            contains: 'К сожалению, в моей базе знаний нет информации',
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+      });
 
+      const unansweredUserMessages: ChatMessageWithUser[] = [];
+
+      for (const botMsg of unhandledBotMessages) {
+        const userMsg = await this.prisma.chatMessage.findFirst({
+          where: {
+            userId: botMsg.userId,
+            role: 'user',
+            createdAt: {
+              lt: botMsg.createdAt,
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+          include: {
+            user: true,
+          },
+        });
+
+        if (userMsg) {
+          unansweredUserMessages.push(userMsg);
+        }
+      }
+      return unansweredUserMessages;
+    }
+
+    // Вместо "any" используем строгий тип Prisma.ChatMessageWhereInput!
+    const whereClause: Prisma.ChatMessageWhereInput = {};
     if (filter === 'user') {
       whereClause.role = 'user';
     } else if (filter === 'bot') {
       whereClause.role = 'assistant';
-    } else if (filter === 'unhandled') {
-      whereClause.role = 'assistant';
-      whereClause.text = {
-        contains: 'К сожалению, в моей базе знаний нет информации',
-      };
     }
 
+    // Убрали лишнее "as Promise..." в конце, так как Prisma сама возвращает нужный тип!
     return this.prisma.chatMessage.findMany({
       where: whereClause,
       orderBy: { createdAt: 'desc' },
       take: limit,
       include: {
-        user: true, // Подтягиваем данные о пользователе
+        user: true,
       },
     });
   }
@@ -58,7 +99,7 @@ export class AdminService {
       orderBy: { createdAt: 'desc' },
       include: {
         _count: {
-          select: { messages: true }, // Prisma сама посчитает количество сообщений пользователя
+          select: { messages: true },
         },
       },
     });
@@ -75,7 +116,7 @@ export class AdminService {
   async getUserChatLogs(userId: string) {
     return this.prisma.chatMessage.findMany({
       where: { userId },
-      orderBy: { createdAt: 'asc' }, // Диалог конкретного юзера сортируем снизу вверх для удобства чтения
+      orderBy: { createdAt: 'asc' },
     });
   }
 
