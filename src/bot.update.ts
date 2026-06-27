@@ -5,7 +5,6 @@ import { AiService } from './ai.service';
 import { PrismaService } from './prisma.service';
 import { DocumentService, SearchResultChunk } from './document.service';
 
-
 @Update()
 export class BotUpdate {
   constructor(
@@ -13,7 +12,6 @@ export class BotUpdate {
     private readonly prismaService: PrismaService,
     private readonly documentService: DocumentService,
     private readonly configService: ConfigService,
-
   ) {}
 
   @Start()
@@ -74,7 +72,7 @@ export class BotUpdate {
       const dbMessages = await this.prismaService.chatMessage.findMany({
         where: { userId },
         orderBy: { createdAt: 'desc' },
-        take: 30,
+        take: 30, // Память на 30 сообщений
       });
 
       const rawHistory = dbMessages
@@ -90,24 +88,84 @@ export class BotUpdate {
       const historyForAi =
         firstUserIndex !== -1 ? rawHistory.slice(firstUserIndex) : [];
 
-      const optimizedQuery = await this.aiService.rewriteQuery(
-        userText,
-        historyForAi,
-      );
-      console.log(
-        `[Query Rewriting] Оригинал: "${userText}" -> Оптимизированный запрос: "${optimizedQuery}"`,
-      );
-
-      const queryEmbedding = await this.aiService.getEmbedding(optimizedQuery);
-
-      const similarChunks = await this.documentService.findSimilarChunks(
-        queryEmbedding,
-        5,
+      // ==============================================
+      // УЛУЧШЕНИЕ 1: ДЕТЕКТОР ПРОСТЫХ ПРИВЕТСТВИЙ (GREETINGS)
+      // ==============================================
+      const greetings = [
+        'привет',
+        'здравствуйте',
+        'салам',
+        'саламатсызбы',
+        'hello',
+        'hi',
+        'добрый день',
+        'доброе утро',
+        'добрый вечер',
+      ];
+      const isSimpleGreeting = greetings.some(
+        (g) =>
+          userText.toLowerCase().trim().startsWith(g) ||
+          userText.toLowerCase().trim() === g,
       );
 
       let contextText = '';
-      if (similarChunks.length > 0) {
+      let hasGoodMatch = true;
+
+      // Если это НЕ простое приветствие, запускаем векторный RAG поиск
+      if (!isSimpleGreeting) {
+        // 1. ИИ-препроцессинг (Query Rewriting + Перевод)
+        const optimizedQuery = await this.aiService.rewriteQuery(
+          userText,
+          historyForAi,
+        );
+        console.log(
+          `[Query Rewriting] Оригинал: "${userText}" -> Оптимизированный запрос: "${optimizedQuery}"`,
+        );
+
+        const queryEmbedding =
+          await this.aiService.getEmbedding(optimizedQuery);
+
+        // Ищем статьи законов в PostgreSQL
+        const similarChunks = await this.documentService.findSimilarChunks(
+          queryEmbedding,
+          5,
+        );
+
+        const htpContactInfo =
+          this.configService.get<string>('HTP_CONTACT_INFO') ||
+          'Дирекцию ПВТ КР';
+
+        // ==============================================
+        // УЛУЧШЕНИЕ 2: СУПЕР-СТРОГИЙ ПОРОГ СХОДСТВА (0.40)
+        // ==============================================
+        const bestMatch = similarChunks[0];
+        hasGoodMatch = bestMatch && Number(bestMatch.distance) <= 0.4;
+
+        if (!hasGoodMatch) {
+          console.log(
+            `[RAG Search] Совпадений не найдено (лучшее расстояние: ${bestMatch ? bestMatch.distance : 'нет'}). Возвращаем контакты.`,
+          );
+
+          const noAnswerMsg =
+            `К сожалению, в моей базе знаний нет информации по вашему вопросу. 📇\n\n` +
+            `Пожалуйста, обратитесь к сотруднику Дирекции ПВТ КР за детальной консультацией:\n` +
+            `📞 ${htpContactInfo}`;
+
+          await this.prismaService.chatMessage.create({
+            data: {
+              userId,
+              role: 'assistant',
+              text: noAnswerMsg,
+            },
+          });
+
+          await ctx.reply(noAnswerMsg);
+          return;
+        }
+
+        // Собираем контекст из найденных статей (только те, что прошли порог 0.40)
         contextText = similarChunks
+          .filter((chunk: SearchResultChunk) => Number(chunk.distance) <= 0.4)
           .map(
             (chunk: SearchResultChunk, index) =>
               `[Статья №${index + 1}]\n` +
@@ -115,27 +173,39 @@ export class BotUpdate {
               `Текст статьи:\n${chunk.content}`,
           )
           .join('\n\n---\n\n');
+      } else {
+        console.log(
+          `[Greeting Detector] Обнаружено простое приветствие. Пропускаем поиск в БД.`,
+        );
       }
 
       const htpContactInfo =
         this.configService.get<string>('HTP_CONTACT_INFO') || 'Дирекцию ПВТ КР';
 
-      const systemPrompt =
+      // ==============================================
+      // УЛУЧШЕНИЕ 3: ЖЕСТКАЯ СИСТЕМНАЯ ИНСТРУКЦИЯ ( Модель строго подчиняется этим правилам)
+      // ==============================================
+      const systemInstruction =
         `Ты — официальный ИИ-ассистент Дирекции Парка Высоких Технологий Кыргызской Республики (ПВТ КР).\n` +
         `Твоя цель — профессионально, вежливо и точно отвечать на вопросы резидентов и кандидатов на основе предоставленного законодательства.\n\n` +
         `СТРОГИЕ ОГРАНИЧЕНИЯ И ПРАВИЛА ПОВЕДЕНИЯ:\n` +
-        `1. ОТВЕЧАЙ ИСКЛЮЧИТЕЛЬНО на основе предоставленного ниже КОНТЕКСТА.\n` +
+        `1. ОТВЕЧАЙ ИСКЛЮЧИТЕЛЬНО на основе предоставленного КОНТЕКСТА.\n` +
         `2. Если в предоставленном КОНТЕКСТЕ нет ответа на вопрос пользователя, ты НЕ ИМЕЕШЬ ПРАВА использовать свои общие знания о мире, придумывать законы от себя или строить догадки. В этом случае строго ответь следующей фразой:\n` +
         `"К сожалению, в моей базе знаний нет информации по вашему вопросу. Пожалуйста, обратитесь к сотруднику Дирекции ПВТ КР за детальной консультацией.\nКонтакты Дирекции ПВТ КР: ${htpContactInfo}."\n` +
-        `3. Будь лаконичен, выражайся официально-деловым юридическим языком. Структурируй ответы списками или абзацами для удобства чтения в мессенджере Telegram.\n` +
-        `4. Если пользователь просто здоровается, представляется или ведет вежливую беседу (small talk), отвечай вежливо и дружелюбно, напоминая, что ты ИИ-ассистент ПВТ КР и готов помочь с вопросами по регистрации, налогам или уставу.\n\n` +
-        `КОНТЕКСТ ИЗ ЗАКОНОВ ПВТ КР:\n` +
-        `${contextText || 'Информация в базе знаний отсутствует.'}\n\n` +
-        `ТЕКУЩИЙ ВОПРОС ПОЛЬЗОВАТЕЛЯ: ${userText}`;
+        `3. ПРАВИЛО ДИАЛОГА (БЕЗ ПОВТОРНЫХ ПРИВЕТСТВИЙ): Никогда не здоровайся заново ("Здравствуйте", "Добрый день") и не представляйся заново в каждом сообщении, если диалог уже идет! Отвечай сразу по делу, кратко и профессионально.\n` +
+        `4. ПРАВИЛО ЯЗЫКА (МУЛЬТИЯЗЫЧНОСТЬ): Отвечай строго на том языке, на котором пользователь задал свой текущий вопрос (например, если вопрос на кыргызском — переведи предоставленный русский контекст законов и ответь на красивом кыргызском; если на английском — на английском, если на русском — на русском).\n` +
+        `5. Будь лаконичен, выражайся официально-деловым юридическим языком. Структурируй ответы списками или абзацами для удобства чтения в мессенджере Telegram.`;
 
+      // Передаем в качестве prompt только чистый контекст и вопрос
+      const userPrompt = isSimpleGreeting
+        ? userText
+        : `КОНТЕКСТ ИЗ ЗАКОНОВ ПВТ КР:\n${contextText}\n\nТЕКУЩИЙ ВОПРОС ПОЛЬЗОВАТЕЛЯ: ${userText}`;
+
+      // Отправляем всё в ИИ (системные правила теперь внедряются на уровне инициализации модели в getGenerativeModel)
       const aiResponse = await this.aiService.generateAnswerWithHistory(
-        systemPrompt,
+        userPrompt,
         historyForAi,
+        systemInstruction, // <--- Передаем третьим параметром
       );
 
       await this.prismaService.chatMessage.create({
