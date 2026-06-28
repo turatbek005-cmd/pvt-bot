@@ -228,8 +228,7 @@ export class BotUpdate {
 
       const userPrompt = isSimpleGreeting
         ? userText
-        : `КОНТЕКСТ ИЗ ЗАКОНОВ ПВТ КР:\n${contextText}\n\nТЕКУЩИЙ ВОПРОС ПОЛЬЗОВАТЕЛЯ: ${userText}`;
-
+        : PROMPTS.USER_PROMPT_WITH_CONTEXT(contextText, userText);
       // Отправляем запрос в Groq
       const aiResponse = await this.aiService.generateAnswerWithHistory(
         userPrompt,
