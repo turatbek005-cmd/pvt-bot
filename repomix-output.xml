@@ -1,0 +1,2434 @@
+This file is a merged representation of a subset of the codebase, containing files not matching ignore patterns, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of a subset of the repository's contents that is considered the most important context.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching these patterns are excluded: node_modules, dist, package-lock.json, test, **/.git, **/.idea, **/.vscode, **/*.db, **/*.exe, **/*.dll, bin, obj, **/*.log
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+.gitignore
+.prettierrc
+docker-compose.yml
+Dockerfile
+documents/pvt_law.txt
+eslint.config.mjs
+nest-cli.json
+package.json
+prisma.config.ts
+prisma/migrations/20260625093323_init_db/migration.sql
+prisma/migrations/migration_lock.toml
+prisma/schema.prisma
+README.md
+src/admin.controller.ts
+src/admin.guard.ts
+src/admin.service.ts
+src/ai.service.ts
+src/app.controller.spec.ts
+src/app.controller.ts
+src/app.module.ts
+src/app.service.ts
+src/bot.update.ts
+src/document.service.ts
+src/main.ts
+src/prisma.service.ts
+tsconfig.build.json
+tsconfig.json
+views/documents.ejs
+views/edit-document.ejs
+views/index.ejs
+views/login.ejs
+views/logs.ejs
+views/user-detail.ejs
+views/users.ejs
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path=".prettierrc">
+{
+  "singleQuote": true,
+  "trailingComma": "all"
+}
+</file>
+
+<file path="Dockerfile">
+# ЭТАП 1: Сборка и компиляция проекта
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+
+RUN npx prisma generate
+
+
+RUN npm run build
+
+FROM node:20-alpine
+WORKDIR /app
+
+COPY package*.json ./
+#
+RUN npm ci --only=production
+
+
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/views ./views
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/documents ./documents
+COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
+
+
+RUN npx prisma generate
+
+
+EXPOSE 3000
+
+
+CMD ["node", "dist/src/main.js"]
+</file>
+
+<file path="documents/pvt_law.txt">
+Статья 1. Цель настоящего Закона
+Настоящий Закон определяет правовые, экономические, организационные основы создания и функционирования Парка высоких технологий Кыргызской Республики. Целью настоящего Закона является привлечение инвестиций, развитие информационных технологий, разработка программного обеспечения и поддержка IT-индустрии в Кыргызской Республике.
+
+Статья 2. Органы управления Парка высоких технологий
+Органами управления Парка высоких технологий (ПВТ) являются Наблюдательный совет и Дирекция ПВТ. Наблюдательный совет осуществляет общий контроль и определяет стратегию развития ПВТ. Дирекция ПВТ осуществляет оперативное управление, регистрирует резидентов и выдает свидетельства о регистрации.
+
+Статья 3. Требования к резидентам ПВТ
+Резидентом Парка высоких технологий может быть зарегистрировано юридическое или физическое лицо (индивидуальный предприниматель), осуществляющее деятельность в сфере разработки программного обеспечения, экспорта IT-услуг, проектирования микросхем, а также создания интерактивных образовательных платформ. Доля выручки от профильной IT-деятельности резидента должна составлять не менее 90 процентов от его совокупного дохода.
+
+Статья 4. Налоговые льготы для резидентов ПВТ
+Резиденты Парка высоких технологий освобождаются от уплаты налога на прибыль, налога на добавленную стоимость (НДС) и налога с продаж. Подоходный налог для наемных работников резидентов ПВТ устанавливается в размере 5 процентов. Отчисления по социальному страхованию для работников резидентов ПВТ исчисляются от размера среднемесячной заработной платы по республике.
+
+Статья 5. Порядок регистрации резидентов ПВТ
+Для регистрации в качестве резидента ПВТ заявитель подает в Дирекцию ПВТ письменное заявление, копии учредительных документов, бизнес-план, подтверждающий соответствие требованиям статьи 3 настоящего Закона. Решение о регистрации принимается Дирекцией ПВТ в течение 10 рабочих дней со дня подачи всех документов. В случае положительного решения заявителю выдается свидетельство резидента ПВТ установленного образца.
+</file>
+
+<file path="eslint.config.mjs">
+// @ts-check
+import eslint from '@eslint/js';
+import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
+import globals from 'globals';
+import tseslint from 'typescript-eslint';
+
+export default tseslint.config(
+  {
+    ignores: ['eslint.config.mjs'],
+  },
+  eslint.configs.recommended,
+  ...tseslint.configs.recommendedTypeChecked,
+  eslintPluginPrettierRecommended,
+  {
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        ...globals.jest,
+      },
+      sourceType: 'commonjs',
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
+  {
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-floating-promises': 'warn',
+      '@typescript-eslint/no-unsafe-argument': 'warn',
+      "prettier/prettier": ["error", { endOfLine: "auto" }],
+    },
+  },
+);
+</file>
+
+<file path="nest-cli.json">
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "src",
+  "compilerOptions": {
+    "deleteOutDir": true
+  }
+}
+</file>
+
+<file path="prisma/migrations/20260625093323_init_db/migration.sql">
+-- CreateExtension
+CREATE EXTENSION IF NOT EXISTS "vector";
+
+-- CreateTable
+CREATE TABLE "User" (
+    "id" TEXT NOT NULL,
+    "username" TEXT,
+    "firstName" TEXT,
+    "lastName" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ChatMessage" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "role" TEXT NOT NULL,
+    "text" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "ChatMessage_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "DocumentChunk" (
+    "id" TEXT NOT NULL,
+    "content" TEXT NOT NULL,
+    "source" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "embedding" vector(768),
+
+    CONSTRAINT "DocumentChunk_pkey" PRIMARY KEY ("id")
+);
+
+-- AddForeignKey
+ALTER TABLE "ChatMessage" ADD CONSTRAINT "ChatMessage_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+</file>
+
+<file path="prisma/migrations/migration_lock.toml">
+# Please do not edit this file manually
+# It should be added in your version-control system (e.g., Git)
+provider = "postgresql"
+</file>
+
+<file path="prisma/schema.prisma">
+datasource db {
+  provider   = "postgresql"
+  extensions = [vector] // <--- Вот здесь теперь правильное имя!
+}
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"] // Разрешаем Prisma управлять расширениями БД
+}
+
+// 1. Таблица пользователей Telegram
+model User {
+  id         String   @id // Будем хранить уникальный Telegram ID пользователя в виде строки
+  username   String?  // Никнейм в TG (например, @turat)
+  firstName  String?  // Имя в TG
+  lastName   String?  // Фамилия в TG
+  createdAt  DateTime @default(now()) // Дата первого обращения в бот
+
+  messages   ChatMessage[] // Связь: у одного пользователя может быть много сообщений
+}
+
+// 2. Таблица истории чата (для аналитики и контекста ИИ)
+model ChatMessage {
+  id        String   @id @default(uuid()) // Уникальный ID сообщения
+  userId    String   // ID пользователя, отправившего сообщение
+  role      String   // Кто отправил: "user" (пользователь) или "assistant" (бот)
+  text      String   // Текст сообщения
+  createdAt DateTime @default(now()) // Время отправки
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// 3. Таблица базы знаний (кусочки законов ПВТ КР)
+model DocumentChunk {
+  id        String   @id @default(uuid())
+  content   String   // Сам текст фрагмента закона (например, Статья 4 закона о ПВТ...)
+  source    String   // Источник (например, "Закон о ПВТ, Статья 4")
+  createdAt DateTime @default(now())
+
+  // Поле для ИИ-вектора. Модель Gemini (text-embedding-004) создает векторы длиной 768 чисел.
+  // Так как в стандартном SQL такого типа нет, мы используем специальный тип расширения pgvector.
+  embedding Unsupported("vector(768)")? 
+}
+</file>
+
+<file path="README.md">
+<p align="center">
+  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
+</p>
+
+[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
+[circleci-url]: https://circleci.com/gh/nestjs/nest
+
+  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
+    <p align="center">
+<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
+<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
+<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
+<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
+<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
+<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
+<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
+  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
+    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
+  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
+</p>
+  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
+  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+
+## Description
+
+[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+
+## Project setup
+
+```bash
+$ npm install
+```
+
+## Compile and run the project
+
+```bash
+# development
+$ npm run start
+
+# watch mode
+$ npm run start:dev
+
+# production mode
+$ npm run start:prod
+```
+
+## Run tests
+
+```bash
+# unit tests
+$ npm run test
+
+# e2e tests
+$ npm run test:e2e
+
+# test coverage
+$ npm run test:cov
+```
+
+## Deployment
+
+When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+
+If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+
+```bash
+$ npm install -g @nestjs/mau
+$ mau deploy
+```
+
+With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+
+## Resources
+
+Check out a few resources that may come in handy when working with NestJS:
+
+- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
+- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
+- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
+- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
+- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
+- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
+- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
+- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+
+## Support
+
+Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+
+## Stay in touch
+
+- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
+- Website - [https://nestjs.com](https://nestjs.com/)
+- Twitter - [@nestframework](https://twitter.com/nestframework)
+
+## License
+
+Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+</file>
+
+<file path="src/admin.guard.ts">
+import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import { Request, Response } from 'express';
+
+@Injectable()
+export class AdminGuard implements CanActivate {
+  canActivate(context: ExecutionContext): boolean {
+    const http = context.switchToHttp();
+    const request = http.getRequest<Request>();
+    const response = http.getResponse<Response>();
+    const isAuthorized = request.cookies?.['admin_session'] === 'authorized';
+    if (!isAuthorized) {
+      response.redirect('/admin/login');
+      return false;
+    }
+
+    return true;
+  }
+}
+</file>
+
+<file path="src/app.controller.spec.ts">
+import { Test, TestingModule } from '@nestjs/testing';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+
+describe('AppController', () => {
+  let appController: AppController;
+
+  beforeEach(async () => {
+    const app: TestingModule = await Test.createTestingModule({
+      controllers: [AppController],
+      providers: [AppService],
+    }).compile();
+
+    appController = app.get<AppController>(AppController);
+  });
+
+  describe('root', () => {
+    it('should return "Hello World!"', () => {
+      expect(appController.getHello()).toBe('Hello World!');
+    });
+  });
+});
+</file>
+
+<file path="src/app.controller.ts">
+import { Controller, Get } from '@nestjs/common';
+import { AppService } from './app.service';
+
+@Controller()
+export class AppController {
+  constructor(private readonly appService: AppService) {}
+
+  @Get()
+  getHello(): string {
+    return this.appService.getHello();
+  }
+}
+</file>
+
+<file path="tsconfig.build.json">
+{
+  "extends": "./tsconfig.json",
+  "exclude": ["node_modules", "test", "dist", "**/*spec.ts"]
+}
+</file>
+
+<file path="tsconfig.json">
+{
+  "compilerOptions": {
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "resolvePackageJsonExports": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2023",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "incremental": true,
+    "skipLibCheck": true,
+    "strictNullChecks": true,
+    "forceConsistentCasingInFileNames": true,
+    "noImplicitAny": false,
+    "strictBindCallApply": false,
+    "noFallthroughCasesInSwitch": false
+  }
+}
+</file>
+
+<file path="views/edit-document.ejs">
+<!DOCTYPE html>
+<html lang="ru" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <title>Редактировать статью | Админка ПВТ КР</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = { darkMode: 'class' }
+      if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    </script>
+</head>
+<body class="h-full text-slate-100 flex transition-colors duration-200 bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
+
+<!-- САЙДБАР НАВИГАЦИИ -->
+<div class="w-64 bg-slate-100 dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col justify-between">
+    <div class="p-6">
+        <h2 class="text-xl font-bold tracking-wider text-slate-800 dark:text-white">ПВТ КР Админ</h2>
+        <p class="text-xs text-slate-400 mt-1">Панель управления ИИ</p>
+        <button onclick="toggleTheme()" class="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-200 dark:bg-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
+            🌓 Сменить тему
+        </button>
+        <nav class="mt-8 space-y-2">
+            <a href="/admin" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+                📊 Статистика
+            </a>
+            <a href="/admin/users" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+                👥 Пользователи
+            </a>
+            <a href="/admin/logs" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+                💬 Логи переписок
+            </a>
+            <a href="/admin/documents" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors bg-indigo-600 text-white">
+                📚 База знаний
+            </a>
+        </nav>
+    </div>
+    <div class="p-6 border-t border-slate-200 dark:border-slate-700">
+        <a href="/admin/logout" class="flex items-center justify-center w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors">
+            🚪 Выйти
+        </a>
+    </div>
+</div>
+
+<!-- ОСНОВНОЙ КОНТЕНТ -->
+<div class="flex-1 p-10 overflow-y-auto">
+    <div class="mb-10">
+        <a href="/admin/documents" class="text-sm text-indigo-500 font-semibold hover:underline">← Назад к базе знаний</a>
+        <h1 class="text-3xl font-extrabold mt-2 text-slate-800 dark:text-white">✏️ Редактировать документ</h1>
+        <p class="text-xs text-slate-400 mt-1">ID: <%= doc.id %></p>
+    </div>
+
+    <!-- ФОРМА РЕДАКТИРОВАНИЯ -->
+    <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-md max-w-4xl">
+        <form action="/admin/documents/<%= doc.id %>/edit" method="POST" class="space-y-4">
+            <div>
+                <label for="source" class="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Источник (Название):</label>
+                <input type="text" id="source" name="source" value="<%= doc.source %>" required class="w-full px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div>
+                <label for="content" class="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Текст статьи:</label>
+                <textarea id="content" name="content" rows="12" required class="w-full px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm leading-relaxed"><%= doc.content %></textarea>
+            </div>
+            <div class="flex justify-end gap-3">
+                <a href="/admin/documents" class="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-sm font-semibold rounded-lg transition-colors">
+                    Отмена
+                </a>
+                <button type="submit" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-md">
+                    ⚡ Сохранить и перевекторизовать
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+  function toggleTheme() {
+    if (document.documentElement.classList.contains('dark')) {
+      document.documentElement.classList.remove('dark');
+      localStorage.theme = 'light';
+    } else {
+      document.documentElement.classList.add('dark');
+      localStorage.theme = 'dark';
+    }
+  }
+</script>
+</body>
+</html>
+</file>
+
+<file path="views/user-detail.ejs">
+<!DOCTYPE html>
+<html lang="ru" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <title>История переписки | Админка ПВТ КР</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = { darkMode: 'class' }
+      if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    </script>
+</head>
+<body class="h-full flex transition-colors duration-200 bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
+
+<!-- САЙДБАР НАВИГАЦИИ -->
+<div class="w-64 bg-slate-100 dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col justify-between">
+    <div class="p-6">
+        <h2 class="text-xl font-bold tracking-wider text-slate-800 dark:text-white">ПВТ КР Админ</h2>
+        <p class="text-xs text-slate-400 mt-1">Панель управления ИИ</p>
+        <button onclick="toggleTheme()" class="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-200 dark:bg-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
+            🌓 Сменить тему
+        </button>
+        <nav class="mt-8 space-y-2">
+            <a href="/admin" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+                📊 Статистика
+            </a>
+            <a href="/admin/users" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors bg-indigo-600 text-white">
+                👥 Пользователи
+            </a>
+            <a href="/admin/logs" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+                💬 Логи переписок
+            </a>
+            <a href="/admin/documents" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+                📚 База знаний
+            </a>
+        </nav>
+    </div>
+    <div class="p-6 border-t border-slate-200 dark:border-slate-700">
+        <a href="/admin/logout" class="flex items-center justify-center w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors">
+            🚪 Выйти
+        </a>
+    </div>
+</div>
+
+<!-- ОСНОВНОЙ КОНТЕНТ -->
+<div class="flex-1 p-10 overflow-y-auto">
+    <div class="flex justify-between items-center mb-10">
+        <div>
+            <a href="/admin/users" class="text-sm text-indigo-500 font-semibold hover:underline">← Назад к списку</a>
+            <h1 class="text-3xl font-extrabold mt-2">💬 Диалог пользователя: <%= user.firstName %> <%= user.lastName || '' %></h1>
+            <% if (user.username) { %>
+                <p class="text-sm text-indigo-500 mt-1">@<%= user.username %> (ID: <%= user.id %>)</p>
+            <% } %>
+        </div>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Сообщений в чате: <%= logs.length %></p>
+    </div>
+
+    <!-- ТЕЛО ДИАЛОГА -->
+    <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-md max-w-4xl space-y-6">
+        <% if (logs.length === 0) { %>
+            <p class="text-center text-slate-400 text-sm py-10">История пуста.</p>
+        <% } %>
+        <% logs.forEach(function(log) { %>
+            <div class="flex flex-col <%= log.role === 'user' ? 'items-end' : 'items-start' %>">
+                <div class="flex items-center gap-2 mb-1 text-xs text-slate-500 dark:text-slate-400">
+                    <span><%= log.role === 'user' ? 'Вы' : 'ИИ-Бот' %></span>
+                    <span>•</span>
+                    <span><%= new Date(log.createdAt).toLocaleTimeString('ru-RU') %></span>
+                </div>
+                <div class="max-w-xl p-4 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap shadow-sm <%= log.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-100 rounded-tl-none' %>">
+                    <%= log.text %>
+                </div>
+            </div>
+        <% }); %>
+    </div>
+</div>
+
+<script>
+  function toggleTheme() {
+    if (document.documentElement.classList.contains('dark')) {
+      document.documentElement.classList.remove('dark');
+      localStorage.theme = 'light';
+    } else {
+      document.documentElement.classList.add('dark');
+      localStorage.theme = 'dark';
+    }
+  }
+</script>
+</body>
+</html>
+</file>
+
+<file path="views/users.ejs">
+<!DOCTYPE html>
+<html lang="ru" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <title>Пользователи | Админка ПВТ КР</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = { darkMode: 'class' }
+      if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    </script>
+</head>
+<body class="h-full flex transition-colors duration-200 bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
+
+<!-- САЙДБАР НАВИГАЦИИ -->
+<div class="w-64 bg-slate-100 dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col justify-between">
+    <div class="p-6">
+        <h2 class="text-xl font-bold tracking-wider text-slate-800 dark:text-white">ПВТ КР Админ</h2>
+        <p class="text-xs text-slate-400 mt-1">Панель управления ИИ</p>
+        <button onclick="toggleTheme()" class="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-200 dark:bg-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
+            🌓 Сменить тему
+        </button>
+        <nav class="mt-8 space-y-2">
+            <a href="/admin" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+                📊 Статистика
+            </a>
+            <a href="/admin/users" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors bg-indigo-600 text-white">
+                👥 Пользователи
+            </a>
+            <a href="/admin/logs" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+                💬 Логи переписок
+            </a>
+            <a href="/admin/documents" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+                📚 База знаний
+            </a>
+        </nav>
+    </div>
+    <div class="p-6 border-t border-slate-200 dark:border-slate-700">
+        <a href="/admin/logout" class="flex items-center justify-center w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors">
+            🚪 Выйти
+        </a>
+    </div>
+</div>
+
+<!-- ОСНОВНОЙ КОНТЕНТ -->
+<div class="flex-1 p-10 overflow-y-auto">
+    <div class="flex justify-between items-center mb-10">
+        <h1 class="text-3xl font-extrabold">👥 Пользователи Telegram</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Всего в базе: <%= users.length %></p>
+    </div>
+
+    <!-- ТАБЛИЦА ПОЛЬЗОВАТЕЛЕЙ -->
+    <div class="bg-white dark:bg-slate-800 border border-slate-250 dark:border-slate-700 rounded-2xl overflow-hidden shadow-md">
+        <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+            <thead class="bg-slate-100 dark:bg-slate-750">
+            <tr>
+                <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Telegram ID</th>
+                <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Имя пользователя</th>
+                <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Никнейм</th>
+                <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Дата регистрации</th>
+                <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Вопросов задано</th>
+                <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Действие</th>
+            </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200 dark:divide-slate-700 bg-white dark:bg-slate-800">
+            <% if (users.length === 0) { %>
+                <tr>
+                    <td colspan="6" class="px-6 py-10 text-center text-sm text-slate-400">Пользователи пока не зарегистрированы.</td>
+                </tr>
+            <% } %>
+            <% users.forEach(function(user) { %>
+                <tr class="hover:bg-slate-100/30 dark:hover:bg-slate-750/30 transition-colors">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
+                        <%= user.id %>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold">
+                        <%= user.firstName %> <%= user.lastName || '' %>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-indigo-500 dark:text-indigo-400 font-medium">
+                        <%= user.username ? '@' + user.username : 'отсутствует' %>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
+                        <%= new Date(user.createdAt).toLocaleDateString('ru-RU') %>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-center">
+                <span class="px-2.5 py-1 text-xs rounded-full bg-slate-100 dark:bg-slate-700">
+                  <%= user._count.messages %>
+                </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <a href="/admin/users/<%= user.id %>" class="text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300">
+                            🔍 История диалога →
+                        </a>
+                    </td>
+                </tr>
+            <% }); %>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+  function toggleTheme() {
+    if (document.documentElement.classList.contains('dark')) {
+      document.documentElement.classList.remove('dark');
+      localStorage.theme = 'light';
+    } else {
+      document.documentElement.classList.add('dark');
+      localStorage.theme = 'dark';
+    }
+  }
+</script>
+</body>
+</html>
+</file>
+
+<file path=".gitignore">
+# compiled output
+/dist
+/node_modules
+/build
+
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS
+.DS_Store
+
+# Tests
+/coverage
+/.nyc_output
+
+# IDEs and editors
+/.idea
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# IDE - VSCode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# dotenv environment variable files
+.env
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
+
+# temp directory
+.temp
+.tmp
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Diagnostic reports (https://nodejs.org/api/report.html)
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+/generated/prisma
+</file>
+
+<file path="src/app.service.ts">
+import { Injectable } from '@nestjs/common';
+
+@Injectable()
+export class AppService {
+  getHello(): string {
+    return 'Hello World!';
+  }
+
+
+}
+</file>
+
+<file path="src/document.service.ts">
+import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
+import { PrismaService } from './prisma.service';
+
+// Объявляем структуру результатов поиска
+export interface SearchResultChunk {
+  id: string;
+  content: string;
+  source: string;
+  distance: number;
+}
+
+@Injectable()
+export class DocumentService implements OnApplicationBootstrap {
+  constructor(
+    private readonly prisma: PrismaService, // Оставили только действительно используемую Prisma
+  ) {}
+
+  // Метод запускается автоматически при старте приложения
+  onApplicationBootstrap() {
+    // Мы отключили автоматический импорт, так как база знаний уже заполнена и управляется через Админ-панель
+    console.log(
+      '[DocumentService] Автоматический импорт отключен. База знаний управляется через Админ-панель.',
+    );
+  }
+
+  // МЕТОД: Семантический поиск похожих статей закона по вектору вопроса
+  async findSimilarChunks(
+    queryVector: number[],
+    limit = 2,
+  ): Promise<SearchResultChunk[]> {
+    const vectorString = `[${queryVector.join(',')}]`;
+
+    const chunks = await this.prisma.$queryRawUnsafe<SearchResultChunk[]>(
+      `SELECT id, content, source, (embedding <=> $1::vector) as distance 
+       FROM "DocumentChunk" 
+       ORDER BY distance ASC 
+       LIMIT $2`,
+      vectorString,
+      limit,
+    );
+
+    return chunks;
+  }
+}
+</file>
+
+<file path="views/documents.ejs">
+<!DOCTYPE html>
+<html lang="ru" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <title>База знаний | Админка ПВТ КР</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = { darkMode: 'class' }
+      if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    </script>
+</head>
+<body class="h-full text-slate-100 flex transition-colors duration-200 bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
+
+<!-- САЙДБАР НАВИГАЦИИ -->
+<div class="w-64 bg-slate-100 dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col justify-between">
+    <div class="p-6">
+        <h2 class="text-xl font-bold tracking-wider text-slate-800 dark:text-white">ПВТ КР Админ</h2>
+        <p class="text-xs text-slate-400 mt-1">Панель управления ИИ</p>
+        <button onclick="toggleTheme()" class="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-200 dark:bg-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
+            🌓 Сменить тему
+        </button>
+        <nav class="mt-8 space-y-2">
+            <a href="/admin" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+                📊 Статистика
+            </a>
+            <a href="/admin/users" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+                👥 Пользователи
+            </a>
+            <a href="/admin/logs" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+                💬 Логи переписок
+            </a>
+            <a href="/admin/documents" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors bg-indigo-600 text-white">
+                📚 База знаний
+            </a>
+        </nav>
+    </div>
+    <div class="p-6 border-t border-slate-200 dark:border-slate-700">
+        <a href="/admin/logout" class="flex items-center justify-center w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors">
+            🚪 Выйти
+        </a>
+    </div>
+</div>
+
+<!-- ОСНОВНОЙ КОНТЕНТ -->
+<div class="flex-1 p-10 overflow-y-auto">
+    <div class="flex justify-between items-center mb-10">
+        <h1 class="text-3xl font-extrabold text-slate-800 dark:text-white">📚 Менеджер Базы знаний</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Загружено документов: <%= docs.length %></p>
+    </div>
+
+    <!-- ФОРМА ДОБАВЛЕНИЯ -->
+    <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 mb-10 shadow-md">
+        <h2 class="text-xl font-bold mb-4">📥 Загрузить и векторизовать новый документ</h2>
+        <form action="/admin/documents" method="POST" class="space-y-4">
+            <div>
+                <label for="source" class="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Источник (Название статьи/положения):</label>
+                <input type="text" id="source" name="source" required placeholder="Например: Статья 6. Порядок выхода из ПВТ КР" class="w-full px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-600 placeholder-slate-500 bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+            <div>
+                <label for="content" class="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Текст статьи (закона/постановления):</label>
+                <textarea id="content" name="content" rows="5" required placeholder="Вставьте сюда точный текст статьи, которую должен запомнить ИИ..." class="w-full px-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-600 placeholder-slate-500 bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+            </div>
+            <div class="flex justify-end">
+                <button type="submit" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-md">
+                    ⚡ Векторизовать и сохранить в ИИ-память
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- ТАБЛИЦА ВСЕХ ЗАГРУЖЕННЫХ СТАТЕЙ -->
+    <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-md">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                <thead class="bg-slate-100 dark:bg-slate-750">
+                <tr>
+                    <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Источник</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Дата загрузки</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Превью текста</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Действия</th>
+                </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200 dark:divide-slate-700 bg-white dark:bg-slate-800">
+                <% if (docs.length === 0) { %>
+                    <tr>
+                        <td colspan="4" class="px-6 py-10 text-center text-sm text-slate-400">В базе знаний пока нет ни одного документа.</td>
+                    </tr>
+                <% } %>
+                <% docs.forEach(function(doc) { %>
+                    <tr class="hover:bg-slate-100/30 dark:hover:bg-slate-750/30 transition-colors">
+                        <td class="px-6 py-4 text-sm font-bold text-indigo-600 dark:text-indigo-400 max-w-xs truncate">
+                            <a href="/admin/documents/<%= doc.id %>/edit" class="hover:underline">
+                                <%= doc.source %>
+                            </a>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
+                            <%= new Date(doc.createdAt).toLocaleDateString('ru-RU') %>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300 max-w-sm truncate">
+                            <%= doc.content %>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium flex gap-3">
+                            <a href="/admin/documents/<%= doc.id %>/edit" class="text-indigo-600 dark:text-indigo-400 hover:underline">
+                                ✏️ Редактировать
+                            </a>
+                            <form action="/admin/documents/<%= doc.id %>/delete" method="POST" onsubmit="return confirm('Вы уверены, что хотите навсегда удалить этот документ и его вектор из базы данных?');" class="inline">
+                                <button type="submit" class="text-red-500 hover:text-red-700 hover:underline">
+                                    🗑️ Удалить
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                <% }); %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+  function toggleTheme() {
+    if (document.documentElement.classList.contains('dark')) {
+      document.documentElement.classList.remove('dark');
+      localStorage.theme = 'light';
+    } else {
+      document.documentElement.classList.add('dark');
+      localStorage.theme = 'dark';
+    }
+  }
+</script>
+</body>
+</html>
+</file>
+
+<file path="views/index.ejs">
+<!DOCTYPE html>
+<html lang="ru" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <title>Статистика | Админка ПВТ КР</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = { darkMode: 'class' }
+      if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    </script>
+</head>
+<body class="h-full flex transition-colors duration-200 bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
+
+<!-- САЙДБАР НАВИГАЦИИ -->
+<div class="w-64 bg-slate-100 dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col justify-between">
+    <div class="p-6">
+        <h2 class="text-xl font-bold tracking-wider text-slate-800 dark:text-white">ПВТ КР Админ</h2>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Панель управления ИИ</p>
+
+        <!-- Кнопка переключения темы -->
+        <button onclick="toggleTheme()" class="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-200 dark:bg-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
+            🌓 Сменить тему
+        </button>
+
+        <nav class="mt-8 space-y-2">
+            <a href="/admin" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors bg-indigo-600 text-white">
+                📊 Статистика
+            </a>
+            <a href="/admin/users" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+                👥 Пользователи
+            </a>
+            <a href="/admin/logs" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+                💬 Логи переписок
+            </a>
+            <a href="/admin/documents" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+                📚 База знаний
+            </a>
+        </nav>
+    </div>
+    <div class="p-6 border-t border-slate-200 dark:border-slate-700">
+        <a href="/admin/logout" class="flex items-center justify-center w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors">
+            🚪 Выйти
+        </a>
+    </div>
+</div>
+
+<!-- ОСНОВНОЙ КОНТЕНТ -->
+<div class="flex-1 p-10 overflow-y-auto">
+    <div class="flex justify-between items-center mb-10">
+        <h1 class="text-3xl font-extrabold">📊 Общая статистика</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Сегодня: <%= new Date().toLocaleDateString('ru-RU') %></p>
+    </div>
+
+    <!-- КЛИКАБЕЛЬНЫЕ КАРТОЧКИ СТАТИСТИКИ -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <!-- Карточка 1: Пользователи (ведет на список пользователей) -->
+        <a href="/admin/users" class="bg-slate-100 dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between hover:scale-[1.02] hover:shadow-lg transition-all duration-200">
+            <div>
+                <p class="text-sm text-slate-500 dark:text-slate-400 font-medium">Всего пользователей</p>
+                <p class="text-3xl font-bold mt-2"><%= stats.totalUsers %></p>
+                <span class="text-xs text-indigo-500 font-semibold mt-1 block">🔍 Посмотреть список →</span>
+            </div>
+            <div class="p-4 bg-indigo-500/10 text-indigo-500 rounded-xl text-2xl">👥</div>
+        </a>
+
+        <!-- Карточка 2: Сообщения (ведет на все логи) -->
+        <a href="/admin/logs" class="bg-slate-100 dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between hover:scale-[1.02] hover:shadow-lg transition-all duration-200">
+            <div>
+                <p class="text-sm text-slate-500 dark:text-slate-400 font-medium">Всего сообщений</p>
+                <p class="text-3xl font-bold mt-2"><%= stats.totalMessages %></p>
+                <span class="text-xs text-emerald-500 font-semibold mt-1 block">🔍 Открыть логи →</span>
+            </div>
+            <div class="p-4 bg-emerald-500/10 text-emerald-500 rounded-xl text-2xl">💬</div>
+        </a>
+
+        <!-- Карточка 3: Неотвеченные вопросы (ведет на логи с авто-фильтром) -->
+        <a href="/admin/logs?filter=unhandled" class="bg-slate-100 dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between hover:scale-[1.02] hover:shadow-lg transition-all duration-200">
+            <div>
+                <p class="text-sm text-slate-500 dark:text-slate-400 font-medium">Вопросы без ответа (ошибки)</p>
+                <p class="text-3xl font-bold text-red-500 mt-2"><%= stats.unhandledCount %></p>
+                <span class="text-xs text-red-500 font-semibold mt-1 block">🔍 Изучить ошибки →</span>
+            </div>
+            <div class="p-4 bg-red-500/10 text-red-500 rounded-xl text-2xl">⚠️</div>
+        </a>
+    </div>
+
+    <div class="p-6 bg-slate-200/50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-2xl">
+        <h3 class="text-lg font-bold mb-2">Добро пожаловать в админ-панель!</h3>
+        <p class="text-slate-500 dark:text-slate-400 leading-relaxed text-sm">
+            Эта панель позволяет Дирекции ПВТ КР контролировать качество ответов искусственного интеллекта. Карточки выше теперь кликабельны: кликните на любую метрику, чтобы мгновенно перейти к детальным спискам или отфильтровать ошибки ИИ.
+        </p>
+    </div>
+</div>
+
+<script>
+  function toggleTheme() {
+    if (document.documentElement.classList.contains('dark')) {
+      document.documentElement.classList.remove('dark');
+      localStorage.theme = 'light';
+    } else {
+      document.documentElement.classList.add('dark');
+      localStorage.theme = 'dark';
+    }
+  }
+</script>
+</body>
+</html>
+</file>
+
+<file path="views/login.ejs">
+<!DOCTYPE html>
+<html lang="ru" class="h-full bg-slate-900">
+<head>
+    <meta charset="UTF-8">
+    <title>Вход в Админ-панель ПВТ КР</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      // Включаем поддержку темного режима по классу
+      tailwind.config = { darkMode: 'class' }
+
+      // Автоматически считываем и применяем сохраненную тему админа при загрузке страницы
+      if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    </script>
+</head>
+<body class="h-full flex items-center justify-center px-4 sm:px-6 lg:px-8 transition-colors duration-200 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100">
+<div class="max-w-md w-full space-y-8 bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700">
+    <div class="flex flex-col items-center">
+        <!-- Иконка замка -->
+        <span class="text-4xl p-3 bg-indigo-500/10 text-indigo-500 rounded-2xl mb-4">🔐</span>
+        <h2 class="text-center text-3xl font-extrabold">Админ-панель</h2>
+        <p class="mt-2 text-center text-sm text-slate-500 dark:text-slate-400">ИИ-ассистент Дирекции ПВТ КР</p>
+    </div>
+
+    <form class="mt-8 space-y-6" action="/admin/login" method="POST">
+        <div class="rounded-md shadow-sm">
+            <div>
+                <label for="password" class="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">Пароль администратора:</label>
+                <input id="password" name="password" type="password" required class="appearance-none rounded-lg relative block w-full px-4 py-3 border border-slate-350 dark:border-slate-600 placeholder-slate-500 text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="Введите пароль администратора">
+            </div>
+        </div>
+
+        <% if (error) { %>
+            <div class="bg-red-500/10 border border-red-500 text-red-500 px-4 py-3 rounded-lg text-sm" role="alert">
+                ⚠️ <%= error %>
+            </div>
+        <% } %>
+
+        <div>
+            <button type="submit" class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors shadow-md">
+                Войти в панель
+            </button>
+        </div>
+    </form>
+</div>
+</body>
+</html>
+</file>
+
+<file path="views/logs.ejs">
+<!DOCTYPE html>
+<html lang="ru" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <title>Логи переписок | Админка ПВТ КР</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = { darkMode: 'class' }
+      if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    </script>
+</head>
+<body class="h-full flex transition-colors duration-200 bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
+
+<!-- САЙДБАР НАВИГАЦИИ -->
+<div class="w-64 bg-slate-100 dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col justify-between">
+    <div class="p-6">
+        <h2 class="text-xl font-bold tracking-wider text-slate-800 dark:text-white">ПВТ КР Админ</h2>
+        <p class="text-xs text-slate-400 mt-1">Панель управления ИИ</p>
+        <button onclick="toggleTheme()" class="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-200 dark:bg-slate-700 text-sm font-semibold rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">
+            🌓 Сменить тему
+        </button>
+        <nav class="mt-8 space-y-2">
+            <a href="/admin" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+                📊 Статистика
+            </a>
+            <a href="/admin/users" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+                👥 Пользователи
+            </a>
+            <a href="/admin/logs" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors bg-indigo-600 text-white">
+                💬 Логи переписок
+            </a>
+            <a href="/admin/documents" class="flex items-center px-4 py-3 rounded-lg text-sm font-medium transition-colors text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+                📚 База знаний
+            </a>
+        </nav>
+    </div>
+    <div class="p-6 border-t border-slate-200 dark:border-slate-700">
+        <a href="/admin/logout" class="flex items-center justify-center w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors">
+            🚪 Выйти
+        </a>
+    </div>
+</div>
+
+<!-- ОСНОВНОЙ КОНТЕНТ -->
+<div class="flex-1 p-10 overflow-y-auto">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-extrabold">💬 Логи переписок</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Показано записей: <%= logs.length %></p>
+    </div>
+
+    <!-- КНОПКИ БЫСТРОЙ ФИЛЬТРАЦИИ -->
+    <div class="flex gap-3 mb-8">
+        <a href="/admin/logs" class="px-4 py-2 text-xs font-semibold rounded-lg transition-all <%= currentFilter === 'all' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700' %>">
+            🌐 Все сообщения
+        </a>
+        <a href="/admin/logs?filter=user" class="px-4 py-2 text-xs font-semibold rounded-lg transition-all <%= currentFilter === 'user' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700' %>">
+            👥 Вопросы пользователей
+        </a>
+        <a href="/admin/logs?filter=bot" class="px-4 py-2 text-xs font-semibold rounded-lg transition-all <%= currentFilter === 'bot' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700' %>">
+            🤖 Ответы ИИ-Бота
+        </a>
+        <a href="/admin/logs?filter=unhandled" class="px-4 py-2 text-xs font-semibold rounded-lg border border-red-500/30 transition-all <%= currentFilter === 'unhandled' ? 'bg-red-600 text-white shadow-md' : 'bg-red-500/10 text-red-500 hover:bg-red-500/20' %>">
+            ⚠️ Вопросы без ответа (Ошибки)
+        </a>
+    </div>
+
+    <!-- ТАБЛИЦА ЛОГОВ -->
+    <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden shadow-md">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                <thead class="bg-slate-100 dark:bg-slate-750">
+                <tr>
+                    <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Время</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Пользователь</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Роль</th>
+                    <th class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Текст сообщения</th>
+                </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200 dark:divide-slate-700 bg-white dark:bg-slate-800">
+                <% if (logs.length === 0) { %>
+                    <tr>
+                        <td colspan="4" class="px-6 py-10 text-center text-sm text-slate-400">Записи отсутствуют.</td>
+                    </tr>
+                <% } %>
+                <% logs.forEach(function(log) { %>
+                    <tr class="hover:bg-slate-100/30 dark:hover:bg-slate-750/30 transition-colors">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-400">
+                            <%= new Date(log.createdAt).toLocaleString('ru-RU') %>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold">
+                            <a href="/admin/users/<%= log.user.id %>" class="hover:underline text-indigo-600 dark:text-indigo-400">
+                                <%= log.user.firstName %> <%= log.user.lastName || '' %>
+                            </a>
+                            <% if (log.user.username) { %>
+                                <span class="text-slate-400 dark:text-slate-500 text-xs block mt-0.5">@<%= log.user.username %></span>
+                            <% } %>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                            <% if (log.role === 'user') { %>
+                                <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-indigo-500/10 text-indigo-400">Пользователь</span>
+                            <% } else { %>
+                                <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-500/10 text-emerald-400">ИИ-Бот</span>
+                            <% } %>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300 max-w-lg break-words leading-relaxed">
+                            <%= log.text %>
+                        </td>
+                    </tr>
+                <% }); %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+  function toggleTheme() {
+    if (document.documentElement.classList.contains('dark')) {
+      document.documentElement.classList.remove('dark');
+      localStorage.theme = 'light';
+    } else {
+      document.documentElement.classList.add('dark');
+      localStorage.theme = 'dark';
+    }
+  }
+</script>
+</body>
+</html>
+</file>
+
+<file path="docker-compose.yml">
+version: '3.8'
+
+services:
+
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: pvt_postgres_db
+    ports:
+      - '5435:5432'
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: always
+
+  bot-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pvt_ai_bot_app
+    ports:
+      - '3000:3000'
+    environment:
+      DATABASE_URL: ${DATABASE_URL_DOCKER}
+      ACTIVE_AI_PROVIDER: ${ACTIVE_AI_PROVIDER}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      HTP_CONTACT_INFO: ${HTP_CONTACT_INFO}
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      GROQ_MODEL: ${GROQ_MODEL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+    depends_on:
+      - postgres
+    restart: always
+
+volumes:
+  pgdata:
+</file>
+
+<file path="src/admin.service.ts">
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from './prisma.service';
+import { ChatMessage, User, Prisma } from '@prisma/client'; // Импортируем Prisma для строгого типа условий
+
+// Создаем строгий тип связи сообщения с пользователем
+type ChatMessageWithUser = ChatMessage & { user: User };
+
+@Injectable()
+export class AdminService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  // 1. Получаем общие цифры статистики для Дашборда
+  async getDashboardStats() {
+    const totalUsers = await this.prisma.user.count();
+    const totalMessages = await this.prisma.chatMessage.count();
+
+    const unhandledCount = await this.prisma.chatMessage.count({
+      where: {
+        role: 'assistant',
+        text: {
+          contains: 'К сожалению, в моей базе знаний нет информации',
+        },
+      },
+    });
+
+    return {
+      totalUsers,
+      totalMessages,
+      unhandledCount,
+    };
+  }
+
+  // 2. Получаем историю переписок с умной фильтрацией реальных вопросов без ответа
+  async getChatLogs(
+    filter?: string,
+    limit = 100,
+  ): Promise<ChatMessageWithUser[]> {
+    // =========================================================
+    // УМНАЯ ФИЛЬТРАЦИЯ: Выводим РЕАЛЬНЫЕ ВОПРОСЫ ПОЛЬЗОВАТЕЛЕЙ, на которые бот не ответил
+    // =========================================================
+    if (filter === 'unhandled') {
+      const unhandledBotMessages = await this.prisma.chatMessage.findMany({
+        where: {
+          role: 'assistant',
+          text: {
+            contains: 'К сожалению, в моей базе знаний нет информации',
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+      });
+
+      const unansweredUserMessages: ChatMessageWithUser[] = [];
+
+      for (const botMsg of unhandledBotMessages) {
+        const userMsg = await this.prisma.chatMessage.findFirst({
+          where: {
+            userId: botMsg.userId,
+            role: 'user',
+            createdAt: {
+              lt: botMsg.createdAt,
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+          include: {
+            user: true,
+          },
+        });
+
+        if (userMsg) {
+          unansweredUserMessages.push(userMsg);
+        }
+      }
+      return unansweredUserMessages;
+    }
+
+    // Вместо "any" используем строгий тип Prisma.ChatMessageWhereInput!
+    const whereClause: Prisma.ChatMessageWhereInput = {};
+    if (filter === 'user') {
+      whereClause.role = 'user';
+    } else if (filter === 'bot') {
+      whereClause.role = 'assistant';
+    }
+
+    // Убрали лишнее "as Promise..." в конце, так как Prisma сама возвращает нужный тип!
+    return this.prisma.chatMessage.findMany({
+      where: whereClause,
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      include: {
+        user: true,
+      },
+    });
+  }
+
+  // 3. Получаем список всех пользователей и считаем количество их сообщений (через Prisma _count)
+  async getUsersList() {
+    return this.prisma.user.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        _count: {
+          select: { messages: true },
+        },
+      },
+    });
+  }
+
+  // 4. Находим пользователя по его ID
+  async getUserById(id: string) {
+    return this.prisma.user.findUnique({
+      where: { id },
+    });
+  }
+
+  // 5. Получаем диалог конкретного пользователя по его ID
+  async getUserChatLogs(userId: string) {
+    return this.prisma.chatMessage.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  // 6. Получаем список всех загруженных документов
+  async getUploadedDocuments() {
+    return this.prisma.documentChunk.findMany({
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        source: true,
+        content: true,
+        createdAt: true,
+      },
+    });
+  }
+
+  // 7. Получаем документ по его ID (для редактирования)
+  async getDocumentById(id: string) {
+    return this.prisma.documentChunk.findUnique({
+      where: { id },
+    });
+  }
+
+  // 8. Удаляем документ по его ID
+  async deleteDocument(id: string) {
+    return this.prisma.documentChunk.delete({
+      where: { id },
+    });
+  }
+}
+</file>
+
+<file path="src/ai.service.ts">
+import { Injectable, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import {
+  GoogleGenerativeAI,
+  GenerativeModel,
+  EmbedContentRequest,
+} from '@google/generative-ai';
+import Groq from 'groq-sdk';
+
+interface ExtendedEmbedContentRequest extends EmbedContentRequest {
+  outputDimensionality?: number;
+}
+
+@Injectable()
+export class AiService implements OnModuleInit {
+  private genAI!: GoogleGenerativeAI;
+  private geminiModel!: GenerativeModel;
+
+  private groq!: Groq;
+  private groqModelName!: string;
+
+  private activeProvider!: string;
+
+  constructor(private readonly configService: ConfigService) {}
+
+  onModuleInit() {
+    this.activeProvider =
+      this.configService.get<string>('ACTIVE_AI_PROVIDER') || 'gemini';
+
+    const geminiKey = this.configService.get<string>('GEMINI_API_KEY') || '';
+    if (geminiKey) {
+      this.genAI = new GoogleGenerativeAI(geminiKey);
+      this.geminiModel = this.genAI.getGenerativeModel({
+        model: 'gemini-2.5-flash',
+      });
+    }
+
+    const groqKey = this.configService.get<string>('GROQ_API_KEY') || '';
+    this.groqModelName =
+      this.configService.get<string>('GROQ_MODEL') || 'llama-3.1-8b-instant';
+    if (groqKey) {
+      this.groq = new Groq({ apiKey: groqKey });
+    }
+  }
+
+  // Единая точка входа с поддержкой жестких системных правил
+  async generateAnswerWithHistory(
+    prompt: string,
+    history: Array<{ role: 'user' | 'model'; text: string }>,
+    systemInstruction: string, // <--- Принимаем системные правила
+  ): Promise<string> {
+    if (this.activeProvider === 'groq') {
+      return this.generateWithGroq(prompt, history, systemInstruction);
+    }
+    return this.generateWithGemini(prompt, history, systemInstruction);
+  }
+
+  // Метод работы с Gemini: динамически внедряет системные правила в модель Google!
+  private async generateWithGemini(
+    prompt: string,
+    history: Array<{ role: 'user' | 'model'; text: string }>,
+    systemInstruction: string,
+  ): Promise<string> {
+    try {
+      const formattedHistory = history.map((item) => ({
+        role: item.role,
+        parts: [{ text: item.text }],
+      }));
+
+      // Инициализируем модель с жесткими системными рамками
+      const modelWithInstruction = this.genAI.getGenerativeModel({
+        model: 'gemini-2.5-flash-lite',
+        systemInstruction: systemInstruction, // Google строго подчинит ИИ этим правилам!
+      });
+
+      const chat = modelWithInstruction.startChat({
+        history: formattedHistory,
+      });
+
+      // Отправляем только чистый вопрос и контекст
+      const result = await chat.sendMessage(prompt);
+      const response = result.response;
+      return response.text();
+    } catch (error: unknown) {
+      console.error('Ошибка при генерации ответа через Gemini:', error);
+
+      let errorMsg = '';
+      if (error instanceof Error) {
+        errorMsg = error.message;
+      }
+
+      if (
+        errorMsg.includes('503') ||
+        errorMsg.includes('Service Unavailable') ||
+        errorMsg.includes('high demand')
+      ) {
+        return '🚦 Сервера Google Gemini сейчас временно перегружены. Пожалуйста, подождите 30 секунд и отправьте ваш вопрос заново.';
+      }
+
+      if (
+        errorMsg.includes('429') ||
+        errorMsg.includes('Too Many Requests') ||
+        errorMsg.includes('quota')
+      ) {
+        return '⏱️ Превышен дневной лимит бесплатных запросов к Google Gemini. Вы можете зайти в файл .env и переключить ACTIVE_AI_PROVIDER на "groq" для работы с резервной моделью Llama 3!';
+      }
+
+      return '🔧 Извините, произошла временная ошибка при обращении к Gemini. Пожалуйста, попробуйте повторить запрос через минуту.';
+    }
+  }
+
+  private async generateWithGroq(
+    prompt: string,
+    history: Array<{ role: 'user' | 'model'; text: string }>,
+    systemInstruction: string,
+  ): Promise<string> {
+    try {
+      const messages = [
+        // Внедряем системную роль в начало массива сообщений
+        { role: 'system' as const, content: systemInstruction },
+        ...history.map((item) => ({
+          role:
+            item.role === 'model' ? ('assistant' as const) : ('user' as const),
+          content: item.text,
+        })),
+      ];
+
+      messages.push({ role: 'user', content: prompt });
+
+      const chatCompletion = await this.groq.chat.completions.create({
+        messages: messages,
+        model: this.groqModelName,
+      });
+
+      return (
+        chatCompletion.choices[0]?.message?.content || 'Ответ от Groq пуст.'
+      );
+    } catch (error: unknown) {
+      console.error('Ошибка в работе Groq API:', error);
+
+      let errorMsg = '';
+      if (error instanceof Error) {
+        errorMsg = error.message;
+      }
+
+      if (
+        errorMsg.includes('401') ||
+        errorMsg.includes('Invalid API Key') ||
+        errorMsg.includes('invalid_api_key')
+      ) {
+        return '🔑 Ошибка авторизации Groq: Неверный или неактивный API-ключ в файле .env. Пожалуйста, перевыпустите ключ на console.groq.com и проверьте его.';
+      }
+      if (errorMsg.includes('429') || errorMsg.includes('Rate limit')) {
+        return '⏱️ Превышен лимит запросов к Groq. Пожалуйста, подождите 1 минуту перед следующим запросом.';
+      }
+
+      return '🔧 Извините, произошла временная ошибка при обращении к Groq. Попробуйте повторить запрос через минуту.';
+    }
+  }
+
+  async getEmbedding(text: string): Promise<number[]> {
+    try {
+      const embedModel = this.genAI.getGenerativeModel({
+        model: 'gemini-embedding-001',
+      });
+
+      const result = await embedModel.embedContent({
+        content: { role: 'user', parts: [{ text }] },
+        outputDimensionality: 768,
+      } as ExtendedEmbedContentRequest);
+
+      return result.embedding.values;
+    } catch (error: unknown) {
+      console.error('Ошибка при генерации эмбеддинга:', error);
+      throw error;
+    }
+  }
+
+  async rewriteQuery(
+    prompt: string,
+    history: Array<{ role: 'user' | 'model'; text: string }>,
+  ): Promise<string> {
+    try {
+      const historyText = history
+        .map((h) => `${h.role === 'model' ? 'Бот' : 'Пользователь'}: ${h.text}`)
+        .join('\n');
+
+      const rewritePrompt =
+        `Ты — эксперт по анализу текстов и профессиональный переводчик.\n` +
+        `Твоя задача — прочитать историю диалога и последний вопрос пользователя, перевести его на РУССКИЙ язык (если он задан на кыргызском, английском или любом другом языке) и сформулировать ОДИН единственный точный и конкретный поисковый запрос на русском языке для поиска в базе данных законов ПВТ КР.\n` +
+        `ПРАВИЛО: Верни только чистый текст этого поискового запроса на русском языке и больше ничего. Никаких кавычек, пояснений или вступлений!\n\n` +
+        `История диалога:\n${historyText || 'История пуста.'}\n\n` +
+        `Последний вопрос пользователя: ${prompt}\n\n` +
+        `Оптимизированный поисковый запрос на русском языке:`;
+
+      if (this.activeProvider === 'groq') {
+        const chatCompletion = await this.groq.chat.completions.create({
+          messages: [{ role: 'user', content: rewritePrompt }],
+          model: this.groqModelName,
+        });
+        return chatCompletion.choices[0]?.message?.content?.trim() || prompt;
+      } else {
+        const chat = this.geminiModel.startChat();
+        const result = await chat.sendMessage(rewritePrompt);
+        return result.response.text().trim() || prompt;
+      }
+    } catch (error) {
+      console.error(
+        'Ошибка при переписывании запроса (Query Rewriting):',
+        error,
+      );
+      return prompt;
+    }
+  }
+}
+</file>
+
+<file path="src/admin.controller.ts">
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Res,
+  Param,
+  Query,
+  Render,
+  UseGuards,
+} from '@nestjs/common';
+import * as express from 'express';
+import { ConfigService } from '@nestjs/config';
+import { randomUUID } from 'node:crypto';
+import { AdminService } from './admin.service';
+import { AdminGuard } from './admin.guard';
+import { AiService } from './ai.service';
+import { PrismaService } from './prisma.service';
+
+@Controller('admin')
+export class AdminController {
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly configService: ConfigService,
+    private readonly aiService: AiService,
+    private readonly prismaService: PrismaService,
+  ) {}
+
+  // 1. Показ главной страницы статистики (Dashboard)
+  @Get()
+  @UseGuards(AdminGuard)
+  @Render('index')
+  async getDashboard() {
+    const stats = await this.adminService.getDashboardStats();
+    return {
+      stats,
+      activeTab: 'dashboard',
+    };
+  }
+
+  // 2. Показ логов переписок с поддержкой фильтрации (?filter=unhandled / user / bot)
+  @Get('logs')
+  @UseGuards(AdminGuard)
+  @Render('logs')
+  async getLogs(@Query('filter') filter?: string) {
+    const logs = await this.adminService.getChatLogs(filter);
+    return {
+      logs,
+      activeTab: 'logs',
+      currentFilter: filter || 'all', // Передаем активный фильтр в шаблон
+    };
+  }
+
+  // 3. Показ списка пользователей Telegram
+  @Get('users')
+  @UseGuards(AdminGuard)
+  @Render('users')
+  async getUsers() {
+    const users = await this.adminService.getUsersList();
+    return {
+      users,
+      activeTab: 'users',
+    };
+  }
+
+  // 4. Показ детального диалога конкретного пользователя по ID
+  @Get('users/:id')
+  @UseGuards(AdminGuard)
+  @Render('user-detail') //views/user-detail.ejs
+  async getUserDetail(@Param('id') id: string) {
+    const user = await this.adminService.getUserById(id);
+    const logs = await this.adminService.getUserChatLogs(id);
+    return {
+      user,
+      logs,
+      activeTab: 'users',
+    };
+  }
+
+  // 5. Показ загруженных документов
+  @Get('documents')
+  @UseGuards(AdminGuard)
+  @Render('documents')
+  async getDocuments() {
+    const docs = await this.adminService.getUploadedDocuments();
+    return {
+      docs,
+      activeTab: 'documents',
+    };
+  }
+
+  // 6. Показ страницы входа
+  @Get('login')
+  @Render('login')
+  getLoginPage() {
+    return { error: null };
+  }
+
+  // 7. Обработка отправки формы входа
+  @Post('login')
+  login(@Body('password') password: string, @Res() res: express.Response) {
+    const adminPassword =
+      this.configService.get<string>('ADMIN_PASSWORD') || '12345';
+
+    if (password === adminPassword) {
+      res.cookie('admin_session', 'authorized', {
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000,
+        sameSite: 'strict',
+      });
+      return res.redirect('/admin');
+    }
+
+    return res.render('login', { error: 'Неверный пароль!' });
+  }
+
+  // 8. Выход из панели
+  @Get('logout')
+  logout(@Res() res: express.Response) {
+    res.clearCookie('admin_session');
+    return res.redirect('/admin/login');
+  }
+
+  // 9. Загрузка и векторизация новой статьи через админку
+  @Post('documents')
+  @UseGuards(AdminGuard)
+  async uploadDocument(
+    @Body('source') source: string,
+    @Body('content') content: string,
+    @Res() res: express.Response,
+  ) {
+    if (!source || !content) {
+      return res.redirect('/admin/documents');
+    }
+
+    try {
+      const embeddingArray = await this.aiService.getEmbedding(content);
+      const vectorString = `[${embeddingArray.join(',')}]`;
+      const id = randomUUID();
+
+      await this.prismaService.$executeRawUnsafe(
+        `INSERT INTO "DocumentChunk" (id, content, source, embedding, "createdAt") VALUES ($1, $2, $3, $4::vector, NOW())`,
+        id,
+        content,
+        source,
+        vectorString,
+      );
+      console.log(
+        `[AdminController] Успешно добавлена и векторизована новая статья: "${source}"`,
+      );
+    } catch (error) {
+      console.error(
+        '[AdminController] Ошибка при ручной загрузке документа:',
+        error,
+      );
+    }
+
+    return res.redirect('/admin/documents');
+  }
+
+  // 10. Удаление документа по его ID
+  @Post('documents/:id/delete')
+  @UseGuards(AdminGuard)
+  async deleteDocument(@Param('id') id: string, @Res() res: express.Response) {
+    try {
+      await this.adminService.deleteDocument(id);
+      console.log(`[AdminController] Успешно удалена статья с ID: ${id}`);
+    } catch (error) {
+      console.error('[AdminController] Ошибка при удалении документа:', error);
+    }
+    return res.redirect('/admin/documents');
+  }
+
+  // 11. Показ страницы редактирования конкретной статьи
+  @Get('documents/:id/edit')
+  @UseGuards(AdminGuard)
+  @Render('edit-document') // views/edit-document.ejs
+  async getEditPage(@Param('id') id: string) {
+    const doc = await this.adminService.getDocumentById(id);
+    return {
+      doc,
+      activeTab: 'documents',
+    };
+  }
+
+  // 12. Сохранение измененного документа (Перегенерация вектора на лету!)
+  @Post('documents/:id/edit')
+  @UseGuards(AdminGuard)
+  async updateDocument(
+    @Param('id') id: string,
+    @Body('source') source: string,
+    @Body('content') content: string,
+    @Res() res: express.Response,
+  ) {
+    if (!source || !content) {
+      return res.redirect(`/admin/documents/${id}/edit`);
+    }
+
+    try {
+      // Генерируем новый вектор для обновленного текста статьи!
+      const embeddingArray = await this.aiService.getEmbedding(content);
+      const vectorString = `[${embeddingArray.join(',')}]`;
+
+      // Обновляем текст, источник и новый вектор в PostgreSQL
+      await this.prismaService.$executeRawUnsafe(
+        `UPDATE "DocumentChunk" SET content = $1, source = $2, embedding = $3::vector WHERE id = $4`,
+        content,
+        source,
+        vectorString,
+        id,
+      );
+      console.log(
+        `[AdminController] Успешно обновлена и векторизована статья: "${source}"`,
+      );
+    } catch (error) {
+      console.error(
+        '[AdminController] Ошибка при обновлении документа:',
+        error,
+      );
+    }
+
+    return res.redirect('/admin/documents');
+  }
+}
+</file>
+
+<file path="src/main.ts">
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'node:path';
+import cookieParser from 'cookie-parser';
+
+async function bootstrap() {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  app.use(cookieParser());
+
+  // Используем process.cwd() для точной привязки к корню проекта на любом компьютере!
+  app.useStaticAssets(join(process.cwd(), 'public'));
+  app.setBaseViewsDir(join(process.cwd(), 'views'));
+  app.setViewEngine('ejs');
+
+  const port = process.env.PORT || 3000;
+  await app.listen(port);
+
+  console.log(`[NestJS] Сервер успешно запущен на порту: ${port}`);
+  console.log(
+    `[NestJS] Админ-панель будет доступна по адресу: http://localhost:${port}/admin`,
+  );
+}
+void bootstrap();
+</file>
+
+<file path="src/app.module.ts">
+import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TelegrafModule } from 'nestjs-telegraf';
+import { BotUpdate } from './bot.update';
+import { AiService } from './ai.service';
+import { PrismaService } from './prisma.service';
+import { DocumentService } from './document.service';
+import { AdminService } from './admin.service';
+import { AdminController } from './admin.controller';
+@Module({
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
+    TelegrafModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        token: configService.get<string>('TELEGRAM_BOT_TOKEN') || '',
+      }),
+      inject: [ConfigService],
+    }),
+  ],
+  controllers: [AdminController],
+  providers: [
+    BotUpdate,
+    AiService,
+    PrismaService,
+    DocumentService,
+    AdminService,
+  ],
+})
+export class AppModule {}
+</file>
+
+<file path="src/bot.update.ts">
+import { Update, Start, Help, On, Ctx } from 'nestjs-telegraf'; // Импортировали Help
+import { Context } from 'telegraf';
+import { ConfigService } from '@nestjs/config';
+import { AiService } from './ai.service';
+import { PrismaService } from './prisma.service';
+import { DocumentService, SearchResultChunk } from './document.service';
+
+@Update()
+export class BotUpdate {
+  // Карта для отслеживания анти-спама (хранит ID пользователя и массив меток времени его сообщений)
+  private userCooldowns = new Map<string, number[]>();
+
+  constructor(
+    private readonly aiService: AiService,
+    private readonly prismaService: PrismaService,
+    private readonly documentService: DocumentService,
+    private readonly configService: ConfigService,
+  ) {}
+
+  @Start()
+  async onStart(@Ctx() ctx: Context) {
+    const userId = ctx.from?.id.toString();
+    if (!userId) return;
+
+    const firstName = ctx.from?.first_name || '';
+    const lastName = ctx.from?.last_name || '';
+    const username = ctx.from?.username || '';
+
+    await this.prismaService.user.upsert({
+      where: { id: userId },
+      update: { firstName, lastName, username },
+      create: { id: userId, firstName, lastName, username },
+    });
+
+    await ctx.reply(
+      `Здравствуйте, ${firstName}! 👋\n\n` +
+        `Я официальный ИИ-ассистент Дирекции Парка Высоких Технологий КР.\n\n` +
+        `Я могу ответить на ваши вопросы по законодательству ПВТ, налогам, уставу и порядку регистрации.\n\n` +
+        `Чем я могу вам помочь?`,
+    );
+  }
+
+  // ШАГ 4.2: Команда /help (Справка для пользователей)
+  @Help()
+  async onHelp(@Ctx() ctx: Context) {
+    await ctx.reply(
+      `❓ Справка по использованию ИИ-ассистента ПВТ КР:\n\n` +
+        `Я — умный помощник, подключенный к официальной юридической базе знаний Парка Высоких Технологий КР. Моя цель — отвечать на ваши вопросы строго по закону.\n\n` +
+        `📌 Что я умею делать:\n` +
+        `• Отвечать на вопросы по налогам и льготам для резидентов ПВТ.\n` +
+        `• Объяснять порядок регистрации и требования к кандидатам.\n` +
+        `• Понимать вопросы на кыргызском, русском и английском языках (кыргызча, орусча, англисче).\n\n` +
+        `⚙️ Команды бота:\n` +
+        `/start — Запустить бота и получить приветствие.\n` +
+        `/help — Показать это справочное меню.\n\n` +
+        `💬 Просто напишите свой вопрос в чат (например: "Каковы налоговые ставки для резидента ПВТ КР?"), и я мгновенно найду нужную статью закона!`,
+    );
+  }
+
+  @On('text')
+  async onMessage(@Ctx() ctx: Context) {
+    if (!ctx.message || !('text' in ctx.message)) {
+      return;
+    }
+
+    const userId = ctx.from?.id.toString();
+    if (!userId) return;
+
+    const userText = ctx.message.text;
+
+    // ==============================================
+    // ШАГ 4.1: АНТИ-СПАМ ПРЕДОХРАНИТЕЛЬ (Throttling)
+    // ==============================================
+    const now = Date.now();
+    const userRequests = this.userCooldowns.get(userId) || [];
+
+    // Оставляем только те метки времени, которые были за последние 10 секунд
+    const recentRequests = userRequests.filter(
+      (timestamp) => now - timestamp < 10000,
+    );
+
+    if (recentRequests.length >= 3) {
+      console.warn(
+        `[Anti-Spam] Заблокирован спам-запрос от пользователя ID: ${userId}`,
+      );
+      await ctx.reply(
+        '⚠️ Пожалуйста, не отправляйте запросы так часто!\n\n' +
+          'Я работаю на бесплатном тарифе разработки. Отправляйте вопросы не чаще одного раза в 3 секунды. Спасибо за понимание! 🙏',
+      );
+      return;
+    }
+
+    // Записываем текущую метку времени сообщения
+    recentRequests.push(now);
+    this.userCooldowns.set(userId, recentRequests);
+    // ==============================================
+
+    try {
+      await ctx.sendChatAction('typing');
+
+      const firstName = ctx.from?.first_name || '';
+      const lastName = ctx.from?.last_name || '';
+      const username = ctx.from?.username || '';
+
+      await this.prismaService.user.upsert({
+        where: { id: userId },
+        update: { firstName, lastName, username },
+        create: { id: userId, firstName, lastName, username },
+      });
+
+      await this.prismaService.chatMessage.create({
+        data: {
+          userId,
+          role: 'user',
+          text: userText,
+        },
+      });
+
+      const dbMessages = await this.prismaService.chatMessage.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        take: 30, // Память на 30 сообщений
+      });
+
+      const rawHistory = dbMessages
+        .reverse()
+        .slice(0, -1)
+        .map((msg) => ({
+          role:
+            msg.role === 'assistant' ? ('model' as const) : ('user' as const),
+          text: msg.text,
+        }));
+
+      const firstUserIndex = rawHistory.findIndex((msg) => msg.role === 'user');
+      const historyForAi =
+        firstUserIndex !== -1 ? rawHistory.slice(firstUserIndex) : [];
+
+      const greetings = [
+        'привет',
+        'здравствуйте',
+        'салам',
+        'саламатсызбы',
+        'hello',
+        'hi',
+        'добрый день',
+        'доброе утро',
+        'добрый вечер',
+      ];
+      const isSimpleGreeting = greetings.some(
+        (g) =>
+          userText.toLowerCase().trim().startsWith(g) ||
+          userText.toLowerCase().trim() === g,
+      );
+
+      let contextText = '';
+      let hasGoodMatch = true;
+
+      if (!isSimpleGreeting) {
+        const optimizedQuery = await this.aiService.rewriteQuery(
+          userText,
+          historyForAi,
+        );
+        console.log(
+          `[Query Rewriting] Оригинал: "${userText}" -> Оптимизированный запрос: "${optimizedQuery}"`,
+        );
+
+        const queryEmbedding =
+          await this.aiService.getEmbedding(optimizedQuery);
+
+        const similarChunks = await this.documentService.findSimilarChunks(
+          queryEmbedding,
+          5,
+        );
+
+        const htpContactInfo =
+          this.configService.get<string>('HTP_CONTACT_INFO') ||
+          'Дирекцию ПВТ КР';
+
+        const bestMatch = similarChunks[0];
+        hasGoodMatch = bestMatch && Number(bestMatch.distance) <= 0.4;
+
+        if (!hasGoodMatch) {
+          console.log(
+            `[RAG Search] Совпадений не найдено (лучшее расстояние: ${bestMatch ? bestMatch.distance : 'нет'}). Возвращаем контакты.`,
+          );
+
+          const noAnswerMsg =
+            `К сожалению, в моей базе знаний нет информации по вашему вопросу. 📇\n\n` +
+            `Пожалуйста, обратитесь к сотруднику Дирекции ПВТ КР за детальной консультацией:\n` +
+            `📞 ${htpContactInfo}`;
+
+          await this.prismaService.chatMessage.create({
+            data: {
+              userId,
+              role: 'assistant',
+              text: noAnswerMsg,
+            },
+          });
+
+          await ctx.reply(noAnswerMsg);
+          return;
+        }
+
+        contextText = similarChunks
+          .filter((chunk: SearchResultChunk) => Number(chunk.distance) <= 0.4)
+          .map(
+            (chunk: SearchResultChunk, index) =>
+              `[Статья №${index + 1}]\n` +
+              `Источник: ${chunk.source}\n` +
+              `Текст статьи:\n${chunk.content}`,
+          )
+          .join('\n\n---\n\n');
+      } else {
+        console.log(
+          `[Greeting Detector] Обнаружено простое приветствие. Пропускаем поиск в БД.`,
+        );
+      }
+
+      const htpContactInfo =
+        this.configService.get<string>('HTP_CONTACT_INFO') || 'Дирекцию ПВТ КР';
+
+      const systemInstruction =
+        `Ты — официальный ИИ-ассистент Дирекции Парка Высоких Технологий Кыргызской Республики (ПВТ КР).\n` +
+        `Твоя цель — профессионально, вежливо и точно отвечать на вопросы резидентов и кандидатов на основе предоставленного законодательства.\n\n` +
+        `СТРОГИЕ ОГРАНИЧЕНИЯ И ПРАВИЛА ПОВЕДЕНИЯ:\n` +
+        `1. ОТВЕЧАЙ ИСКЛЮЧИТЕЛЬНО на основе предоставленного КОНТЕКСТА.\n` +
+        `2. Если в предоставленном КОНТЕКСТЕ нет ответа на вопрос пользователя, ты НЕ ИМЕЕШЬ ПРАВА использовать свои общие знания о мире, придумывать законы от себя или строить догадки. В этом случае строго ответь следующей фразой:\n` +
+        `"К сожалению, в моей базе знаний нет информации по вашему вопросу. Пожалуйста, обратитесь к сотруднику Дирекции ПВТ КР за детальной консультацией.\nКонтакты Дирекции ПВТ КР: ${htpContactInfo}."\n` +
+        `3. ПРАВИЛО ДИАЛОГА (БЕЗ ПОВТОРНЫХ ПРИВЕТСТВИЙ): Никогда не здоровайся заново ("Здравствуйте", "Добрый день") и не представляйся заново в каждом сообщении, если диалог уже идет! Отвечай сразу по делу, кратко и профессионально.\n` +
+        `4. ПРАВИЛО ЯЗЫКА (МУЛЬТИЯЗЫЧНОСТЬ): Отвечай строго на том языке, на котором пользователь задал свой текущий вопрос (например, если вопрос на кыргызском — переведи предоставленный русский контекст законов и ответь на красивом кыргызском; если на английском — на английском, если на русском — на русском).\n` +
+        `5. Будь лаконичен, выражайся официально-деловым юридическим языком. Структурируй ответы списками или абзацами для удобства чтения в мессенджере Telegram.`;
+
+      const userPrompt = isSimpleGreeting
+        ? userText
+        : `КОНТЕКСТ ИЗ ЗАКОНОВ ПВТ КР:\n${contextText}\n\nТЕКУЩИЙ ВОПРОС ПОЛЬЗОВАТЕЛЯ: ${userText}`;
+
+      const aiResponse = await this.aiService.generateAnswerWithHistory(
+        userPrompt,
+        historyForAi,
+        systemInstruction,
+      );
+
+      await this.prismaService.chatMessage.create({
+        data: {
+          userId,
+          role: 'assistant',
+          text: aiResponse,
+        },
+      });
+
+      const messageChunks = this.splitMessage(aiResponse);
+      for (const chunk of messageChunks) {
+        await ctx.reply(chunk);
+      }
+    } catch (error) {
+      console.error('Ошибка при обработке сообщения ботом:', error);
+      await ctx.reply('Произошла ошибка при обработке вашего запроса.');
+    }
+  }
+
+  private splitMessage(text: string, maxLength = 4000): string[] {
+    const chunks: string[] = [];
+    let currentChunk = '';
+
+    const lines = text.split('\n');
+
+    for (const line of lines) {
+      if (currentChunk.length + line.length + 1 > maxLength) {
+        chunks.push(currentChunk);
+        currentChunk = line;
+      } else {
+        currentChunk = currentChunk ? `${currentChunk}\n${line}` : line;
+      }
+    }
+
+    if (currentChunk) {
+      chunks.push(currentChunk);
+    }
+
+    return chunks;
+  }
+}
+</file>
+
+<file path="package.json">
+{
+  "name": "pvt-bot",
+  "version": "0.0.1",
+  "description": "",
+  "author": "",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "build": "nest build",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "start": "nest start",
+    "start:dev": "nest start --watch",
+    "start:debug": "nest start --debug --watch",
+    "start:prod": "node dist/main",
+    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:cov": "jest --coverage",
+    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+    "test:e2e": "jest --config ./test/jest-e2e.json"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@nestjs/common": "^11.0.1",
+    "@nestjs/config": "^4.0.4",
+    "@nestjs/core": "^11.0.1",
+    "@nestjs/platform-express": "^11.0.1",
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^17.4.2",
+    "ejs": "^6.0.1",
+    "groq-sdk": "^1.3.0",
+    "nestjs-telegraf": "^2.9.1",
+    "pg": "^8.22.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1",
+    "telegraf": "^4.16.3"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.2.0",
+    "@eslint/js": "^9.18.0",
+    "@nestjs/cli": "^11.0.0",
+    "@nestjs/schematics": "^11.0.0",
+    "@nestjs/testing": "^11.0.1",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/express": "^5.0.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.0.0",
+    "@types/pg": "^8.20.0",
+    "@types/supertest": "^7.0.0",
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^10.0.1",
+    "eslint-plugin-prettier": "^5.2.2",
+    "globals": "^17.0.0",
+    "jest": "^30.0.0",
+    "prettier": "^3.4.2",
+    "prisma": "^7.8.0",
+    "source-map-support": "^0.5.21",
+    "supertest": "^7.0.0",
+    "ts-jest": "^29.2.5",
+    "ts-loader": "^9.5.2",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.20.0"
+  },
+  "jest": {
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
+    "rootDir": "src",
+    "testRegex": ".*\\.spec\\.ts$",
+    "transform": {
+      "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "collectCoverageFrom": [
+      "**/*.(t|j)s"
+    ],
+    "coverageDirectory": "../coverage",
+    "testEnvironment": "node"
+  }
+}
+</file>
+
+</files>

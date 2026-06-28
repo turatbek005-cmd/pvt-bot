@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import * as express from 'express';
 import { ConfigService } from '@nestjs/config';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash } from 'node:crypto';
 import { AdminService } from './admin.service';
 import { AdminGuard } from './admin.guard';
 import { AiService } from './ai.service';
@@ -26,7 +26,15 @@ export class AdminController {
     private readonly prismaService: PrismaService,
   ) {}
 
-  // 1. Показ главной страницы статистики (Dashboard)
+  /**
+   * Генерация токена сессии на основе SHA-256 хэша пароля из .env
+   */
+  private getSessionHash(): string {
+    const adminPassword =
+      this.configService.get<string>('ADMIN_PASSWORD') || '12345';
+    return createHash('sha256').update(adminPassword).digest('hex');
+  }
+
   @Get()
   @UseGuards(AdminGuard)
   @Render('index')
@@ -38,7 +46,6 @@ export class AdminController {
     };
   }
 
-  // 2. Показ логов переписок с поддержкой фильтрации (?filter=unhandled / user / bot)
   @Get('logs')
   @UseGuards(AdminGuard)
   @Render('logs')
@@ -47,11 +54,10 @@ export class AdminController {
     return {
       logs,
       activeTab: 'logs',
-      currentFilter: filter || 'all', // Передаем активный фильтр в шаблон
+      currentFilter: filter || 'all',
     };
   }
 
-  // 3. Показ списка пользователей Telegram
   @Get('users')
   @UseGuards(AdminGuard)
   @Render('users')
@@ -63,10 +69,9 @@ export class AdminController {
     };
   }
 
-  // 4. Показ детального диалога конкретного пользователя по ID
   @Get('users/:id')
   @UseGuards(AdminGuard)
-  @Render('user-detail') //views/user-detail.ejs
+  @Render('user-detail')
   async getUserDetail(@Param('id') id: string) {
     const user = await this.adminService.getUserById(id);
     const logs = await this.adminService.getUserChatLogs(id);
@@ -77,7 +82,6 @@ export class AdminController {
     };
   }
 
-  // 5. Показ загруженных документов
   @Get('documents')
   @UseGuards(AdminGuard)
   @Render('documents')
@@ -89,24 +93,23 @@ export class AdminController {
     };
   }
 
-  // 6. Показ страницы входа
   @Get('login')
   @Render('login')
   getLoginPage() {
     return { error: null };
   }
 
-  // 7. Обработка отправки формы входа
   @Post('login')
   login(@Body('password') password: string, @Res() res: express.Response) {
     const adminPassword =
       this.configService.get<string>('ADMIN_PASSWORD') || '12345';
 
     if (password === adminPassword) {
-      res.cookie('admin_session', 'authorized', {
-        httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000,
-        sameSite: 'strict',
+      const sessionToken = this.getSessionHash();
+      res.cookie('admin_session', sessionToken, {
+        httpOnly: true, // Исключает доступ к куке через JS
+        maxAge: 24 * 60 * 60 * 1000, // 1 день
+        sameSite: 'strict', // Защита от CSRF
       });
       return res.redirect('/admin');
     }
@@ -114,14 +117,15 @@ export class AdminController {
     return res.render('login', { error: 'Неверный пароль!' });
   }
 
-  // 8. Выход из панели
   @Get('logout')
   logout(@Res() res: express.Response) {
     res.clearCookie('admin_session');
     return res.redirect('/admin/login');
   }
 
-  // 9. Загрузка и векторизация новой статьи через админку
+  /**
+   * Безопасное добавление статьи через параметризованный $executeRaw
+   */
   @Post('documents')
   @UseGuards(AdminGuard)
   async uploadDocument(
@@ -138,16 +142,11 @@ export class AdminController {
       const vectorString = `[${embeddingArray.join(',')}]`;
       const id = randomUUID();
 
-      await this.prismaService.$executeRawUnsafe(
-        `INSERT INTO "DocumentChunk" (id, content, source, embedding, "createdAt") VALUES ($1, $2, $3, $4::vector, NOW())`,
-        id,
-        content,
-        source,
-        vectorString,
-      );
-      console.log(
-        `[AdminController] Успешно добавлена и векторизована новая статья: "${source}"`,
-      );
+      await this.prismaService.$executeRaw`
+        INSERT INTO "DocumentChunk" (id, content, source, embedding, "createdAt") 
+        VALUES (${id}, ${content}, ${source}, ${vectorString}::vector, NOW())
+      `;
+      console.log(`[AdminController] Успешно добавлена статья: "${source}"`);
     } catch (error) {
       console.error(
         '[AdminController] Ошибка при ручной загрузке документа:',
@@ -158,7 +157,6 @@ export class AdminController {
     return res.redirect('/admin/documents');
   }
 
-  // 10. Удаление документа по его ID
   @Post('documents/:id/delete')
   @UseGuards(AdminGuard)
   async deleteDocument(@Param('id') id: string, @Res() res: express.Response) {
@@ -171,10 +169,9 @@ export class AdminController {
     return res.redirect('/admin/documents');
   }
 
-  // 11. Показ страницы редактирования конкретной статьи
   @Get('documents/:id/edit')
   @UseGuards(AdminGuard)
-  @Render('edit-document') // views/edit-document.ejs
+  @Render('edit-document')
   async getEditPage(@Param('id') id: string) {
     const doc = await this.adminService.getDocumentById(id);
     return {
@@ -183,7 +180,9 @@ export class AdminController {
     };
   }
 
-  // 12. Сохранение измененного документа (Перегенерация вектора на лету!)
+  /**
+   * Безопасное обновление статьи через параметризованный $executeRaw
+   */
   @Post('documents/:id/edit')
   @UseGuards(AdminGuard)
   async updateDocument(
@@ -197,21 +196,15 @@ export class AdminController {
     }
 
     try {
-      // Генерируем новый вектор для обновленного текста статьи!
       const embeddingArray = await this.aiService.getEmbedding(content);
       const vectorString = `[${embeddingArray.join(',')}]`;
 
-      // Обновляем текст, источник и новый вектор в PostgreSQL
-      await this.prismaService.$executeRawUnsafe(
-        `UPDATE "DocumentChunk" SET content = $1, source = $2, embedding = $3::vector WHERE id = $4`,
-        content,
-        source,
-        vectorString,
-        id,
-      );
-      console.log(
-        `[AdminController] Успешно обновлена и векторизована статья: "${source}"`,
-      );
+      await this.prismaService.$executeRaw`
+        UPDATE "DocumentChunk" 
+        SET content = ${content}, source = ${source}, embedding = ${vectorString}::vector 
+        WHERE id = ${id}
+      `;
+      console.log(`[AdminController] Успешно обновлена статья: "${source}"`);
     } catch (error) {
       console.error(
         '[AdminController] Ошибка при обновлении документа:',

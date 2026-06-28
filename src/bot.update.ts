@@ -1,13 +1,13 @@
-import { Update, Start, Help, On, Ctx } from 'nestjs-telegraf'; // Импортировали Help
+import { Update, Start, Help, On, Ctx } from 'nestjs-telegraf';
 import { Context } from 'telegraf';
 import { ConfigService } from '@nestjs/config';
 import { AiService } from './ai.service';
 import { PrismaService } from './prisma.service';
 import { DocumentService, SearchResultChunk } from './document.service';
+import { PROMPTS } from './prompts.config';
 
 @Update()
 export class BotUpdate {
-  // Карта для отслеживания анти-спама (хранит ID пользователя и массив меток времени его сообщений)
   private userCooldowns = new Map<string, number[]>();
 
   constructor(
@@ -40,7 +40,6 @@ export class BotUpdate {
     );
   }
 
-  // ШАГ 4.2: Команда /help (Справка для пользователей)
   @Help()
   async onHelp(@Ctx() ctx: Context) {
     await ctx.reply(
@@ -68,13 +67,9 @@ export class BotUpdate {
 
     const userText = ctx.message.text;
 
-    // ==============================================
-    // ШАГ 4.1: АНТИ-СПАМ ПРЕДОХРАНИТЕЛЬ (Throttling)
-    // ==============================================
+    // Предохранитель от спама (Throttling)
     const now = Date.now();
     const userRequests = this.userCooldowns.get(userId) || [];
-
-    // Оставляем только те метки времени, которые были за последние 10 секунд
     const recentRequests = userRequests.filter(
       (timestamp) => now - timestamp < 10000,
     );
@@ -90,10 +85,8 @@ export class BotUpdate {
       return;
     }
 
-    // Записываем текущую метку времени сообщения
     recentRequests.push(now);
     this.userCooldowns.set(userId, recentRequests);
-    // ==============================================
 
     try {
       await ctx.sendChatAction('typing');
@@ -102,12 +95,14 @@ export class BotUpdate {
       const lastName = ctx.from?.last_name || '';
       const username = ctx.from?.username || '';
 
+      // Создаем или обновляем пользователя в БД
       await this.prismaService.user.upsert({
         where: { id: userId },
         update: { firstName, lastName, username },
         create: { id: userId, firstName, lastName, username },
       });
 
+      // Сохраняем вопрос пользователя
       await this.prismaService.chatMessage.create({
         data: {
           userId,
@@ -116,10 +111,11 @@ export class BotUpdate {
         },
       });
 
+      // Извлекаем историю переписки
       const dbMessages = await this.prismaService.chatMessage.findMany({
         where: { userId },
         orderBy: { createdAt: 'desc' },
-        take: 30, // Память на 30 сообщений
+        take: 30,
       });
 
       const rawHistory = dbMessages
@@ -152,57 +148,72 @@ export class BotUpdate {
           userText.toLowerCase().trim() === g,
       );
 
+      const htpContactInfo =
+        this.configService.get<string>('HTP_CONTACT_INFO') || 'Дирекцию ПВТ КР';
+
+      // Шаблон сообщения при отсутствии ответа в базе знаний
+      const fallbackNoAnswerMessage =
+        `К сожалению, в моей базе знаний нет информации по вашему вопросу. 📇\n\n` +
+        `Пожалуйста, обратитесь к сотруднику Дирекции ПВТ КР за детальной консультацией:\n` +
+        `📞 ${htpContactInfo}`;
+
       let contextText = '';
-      let hasGoodMatch = true;
+      let detectedLanguage = 'русский'; // По умолчанию
 
       if (!isSimpleGreeting) {
-        const optimizedQuery = await this.aiService.rewriteQuery(
+        // Оптимизируем запрос через Groq
+        const rawOutput = await this.aiService.rewriteQuery(
           userText,
           historyForAi,
         );
+        console.log(`[Query Rewriting] Результат от Groq: "${rawOutput}"`);
+
+        // Разделяем запрос и язык с помощью регулярного выражения
+        const languageMatch = rawOutput.match(/(.*)\s*\(Язык:\s*(.*?)\)/i);
+        let cleanQuery = rawOutput;
+
+        if (languageMatch) {
+          cleanQuery = languageMatch[1].trim();
+          detectedLanguage = languageMatch[2].trim();
+        }
+
         console.log(
-          `[Query Rewriting] Оригинал: "${userText}" -> Оптимизированный запрос: "${optimizedQuery}"`,
+          `[Language Detector] Чистый запрос: "${cleanQuery}" | Язык оригинала: "${detectedLanguage}"`,
         );
 
-        const queryEmbedding =
-          await this.aiService.getEmbedding(optimizedQuery);
+        // Генерируем вектор только для чистого запроса
+        const queryEmbedding = await this.aiService.getEmbedding(cleanQuery);
 
+        // Ищем похожие статьи в PostgreSQL
         const similarChunks = await this.documentService.findSimilarChunks(
           queryEmbedding,
           5,
         );
 
-        const htpContactInfo =
-          this.configService.get<string>('HTP_CONTACT_INFO') ||
-          'Дирекцию ПВТ КР';
-
+        // ЗАЩИТА УРОВНЯ 1: Сходство вектора по порогу 0.5
         const bestMatch = similarChunks[0];
-        hasGoodMatch = bestMatch && Number(bestMatch.distance) <= 0.4;
+        const hasGoodMatch = bestMatch && Number(bestMatch.distance) <= 0.5;
 
         if (!hasGoodMatch) {
           console.log(
-            `[RAG Search] Совпадений не найдено (лучшее расстояние: ${bestMatch ? bestMatch.distance : 'нет'}). Возвращаем контакты.`,
+            `[RAG Search] Статей не найдено (лучшее расстояние: ${bestMatch ? bestMatch.distance : 'нет'}). Отказ.`,
           );
-
-          const noAnswerMsg =
-            `К сожалению, в моей базе знаний нет информации по вашему вопросу. 📇\n\n` +
-            `Пожалуйста, обратитесь к сотруднику Дирекции ПВТ КР за детальной консультацией:\n` +
-            `📞 ${htpContactInfo}`;
 
           await this.prismaService.chatMessage.create({
             data: {
               userId,
               role: 'assistant',
-              text: noAnswerMsg,
+              text: fallbackNoAnswerMessage,
             },
           });
 
-          await ctx.reply(noAnswerMsg);
+          await ctx.reply(fallbackNoAnswerMessage);
           return;
         }
 
+        // Собираем контекст из найденных статей
         contextText = similarChunks
-          .filter((chunk: SearchResultChunk) => Number(chunk.distance) <= 0.4)
+          .filter((chunk: SearchResultChunk) => Number(chunk.distance) <= 0.5)
           .map(
             (chunk: SearchResultChunk, index) =>
               `[Статья №${index + 1}]\n` +
@@ -210,45 +221,37 @@ export class BotUpdate {
               `Текст статьи:\n${chunk.content}`,
           )
           .join('\n\n---\n\n');
-      } else {
-        console.log(
-          `[Greeting Detector] Обнаружено простое приветствие. Пропускаем поиск в БД.`,
-        );
       }
 
-      const htpContactInfo =
-        this.configService.get<string>('HTP_CONTACT_INFO') || 'Дирекцию ПВТ КР';
-
-      const systemInstruction =
-        `Ты — официальный ИИ-ассистент Дирекции Парка Высоких Технологий Кыргызской Республики (ПВТ КР).\n` +
-        `Твоя цель — профессионально, вежливо и точно отвечать на вопросы резидентов и кандидатов на основе предоставленного законодательства.\n\n` +
-        `СТРОГИЕ ОГРАНИЧЕНИЯ И ПРАВИЛА ПОВЕДЕНИЯ:\n` +
-        `1. ОТВЕЧАЙ ИСКЛЮЧИТЕЛЬНО на основе предоставленного КОНТЕКСТА.\n` +
-        `2. Если в предоставленном КОНТЕКСТЕ нет ответа на вопрос пользователя, ты НЕ ИМЕЕШЬ ПРАВА использовать свои общие знания о мире, придумывать законы от себя или строить догадки. В этом случае строго ответь следующей фразой:\n` +
-        `"К сожалению, в моей базе знаний нет информации по вашему вопросу. Пожалуйста, обратитесь к сотруднику Дирекции ПВТ КР за детальной консультацией.\nКонтакты Дирекции ПВТ КР: ${htpContactInfo}."\n` +
-        `3. ПРАВИЛО ДИАЛОГА (БЕЗ ПОВТОРНЫХ ПРИВЕТСТВИЙ): Никогда не здоровайся заново ("Здравствуйте", "Добрый день") и не представляйся заново в каждом сообщении, если диалог уже идет! Отвечай сразу по делу, кратко и профессионально.\n` +
-        `4. ПРАВИЛО ЯЗЫКА (МУЛЬТИЯЗЫЧНОСТЬ): Отвечай строго на том языке, на котором пользователь задал свой текущий вопрос (например, если вопрос на кыргызском — переведи предоставленный русский контекст законов и ответь на красивом кыргызском; если на английском — на английском, если на русском — на русском).\n` +
-        `5. Будь лаконичен, выражайся официально-деловым юридическим языком. Структурируй ответы списками или абзацами для удобства чтения в мессенджере Telegram.`;
+      // Передаем определенный язык прямо в системную инструкцию
+      const systemInstruction = PROMPTS.SYSTEM_INSTRUCTION(detectedLanguage);
 
       const userPrompt = isSimpleGreeting
         ? userText
         : `КОНТЕКСТ ИЗ ЗАКОНОВ ПВТ КР:\n${contextText}\n\nТЕКУЩИЙ ВОПРОС ПОЛЬЗОВАТЕЛЯ: ${userText}`;
 
+      // Отправляем запрос в Groq
       const aiResponse = await this.aiService.generateAnswerWithHistory(
         userPrompt,
         historyForAi,
         systemInstruction,
       );
 
+      // ЗАЩИТА УРОВНЯ 2: Если Groq не нашел ответа и вернул код 590
+      const finalBotText =
+        aiResponse.trim() === '590' ? fallbackNoAnswerMessage : aiResponse;
+
+      // Записываем ответ бота в историю
       await this.prismaService.chatMessage.create({
         data: {
           userId,
           role: 'assistant',
-          text: aiResponse,
+          text: finalBotText,
         },
       });
 
-      const messageChunks = this.splitMessage(aiResponse);
+      // Разбиваем длинные сообщения и отправляем пользователю
+      const messageChunks = this.splitMessage(finalBotText);
       for (const chunk of messageChunks) {
         await ctx.reply(chunk);
       }
@@ -261,7 +264,6 @@ export class BotUpdate {
   private splitMessage(text: string, maxLength = 4000): string[] {
     const chunks: string[] = [];
     let currentChunk = '';
-
     const lines = text.split('\n');
 
     for (const line of lines) {
